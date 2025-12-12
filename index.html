@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astro Chat</title>
+
+<style>
+html, body {
+  padding:0; margin:0;
+  height:100%; width:100%;
+  background:#f0f2f5;
+  overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
+}
+
+.chat-shell {
+  height:100%;
+  width:100%;
+  background:white;
+  display:flex;
+  flex-direction:column;
+}
+
+.chat-header {
+  background:#075E54;
+  color:white;
+  padding:14px;
+  font-size:18px;
+  font-weight:600;
+}
+
+.chat-messages {
+  flex:1;
+  padding:16px;
+  overflow-y:auto;
+  background:#e5ddd5;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.msg {
+  max-width:75%;
+  padding:10px;
+  border-radius:12px;
+  word-break:break-word;
+}
+
+.msg.me {
+  background:#dcf8c6;
+  align-self:flex-end;
+}
+
+.msg.them {
+  background:white;
+  align-self:flex-start;
+}
+
+.chat-input {
+  display:flex;
+  padding:12px;
+  border-top:1px solid #ccc;
+  background:white;
+}
+
+.chat-input input {
+  flex:1;
+  border-radius:20px;
+  padding:10px;
+  border:1px solid #ccc;
+}
+
+.chat-input button {
+  margin-left:8px;
+  padding:10px 16px;
+  background:#25D366;
+  border:none;
+  border-radius:20px;
+  color:white;
+  font-weight:600;
+}
+</style>
+</head>
+
+<body>
+<div class="chat-shell">
+
+  <div class="chat-header">Astro Chat</div>
+
+  <div id="messages" class="chat-messages"></div>
+
+  <div class="chat-input">
+    <input id="msg" placeholder="Type a message…">
+    <button onclick="sendMsg()">Send</button>
+  </div>
+
+</div>
+
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
+<script>
+const PUB="pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc";
+const SUB="sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2";
+
+function uuid() {
+  let u=localStorage.getItem("astro_uuid");
+  if(!u){ u="u_"+Math.random().toString(36).substr(2); localStorage.setItem("astro_uuid",u); }
+  return u;
+}
+
+const UUID=uuid();
+const CHANNEL="session_"+UUID;
+
+const pubnub=new PubNub({publishKey:PUB,subscribeKey:SUB,uuid:UUID});
+pubnub.subscribe({channels:[CHANNEL]});
+
+pubnub.addListener({
+  message:e=>append(e.message)
+});
+
+function sendMsg(){
+  const input=document.getElementById("msg");
+  const text=input.value.trim();
+  if(!text) return;
+
+  const msg={sender:UUID,text:text};
+  pubnub.publish({channel:CHANNEL,message:msg});
+  append(msg);
+  input.value="";
+}
+
+function append(m){
+  const box=document.getElementById("messages");
+  const div=document.createElement("div");
+  div.className="msg "+(m.sender===UUID?"me":"them");
+  div.textContent=m.text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+</script>
+
+</body>
+</html>
