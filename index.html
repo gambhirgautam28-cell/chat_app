@@ -8,22 +8,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --header-bg: #F8CFAF; /* your chosen header color */
+    --header-bg: #F8CFAF;
     --accent: #6b4fe6;
     --me-bubble: #eefbe9;
     --them-bubble: #ffffff;
     --shadow: 0 10px 30px rgba(15,23,42,0.12);
     --card-radius: 18px;
   }
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#0f172a;background:linear-gradient(180deg,#f6f7fb 0%, #f0f2f5 100%);}
-  /* center container (you'll embed in an iframe or use a card wrapper) */
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Roboto;background:#efefef;}
   .host-wrap{height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;}
-  /* Chat card */
   .chat-card{
     width:100%;
     max-width:420px;
     height:82vh;
-    background:linear-gradient(180deg,#fff,#fbfbfb);
+    background:white;
     border-radius:var(--card-radius);
     box-shadow:var(--shadow);
     overflow:hidden;
@@ -31,346 +29,283 @@
     flex-direction:column;
     border:1px solid rgba(15,23,42,0.04);
   }
-
-  /* Header */
   .chat-header{
-    display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--header-bg); /* soft peach */
+    display:flex;align-items:center;gap:12px;
+    padding:12px 14px;background:var(--header-bg);
   }
-  .astro-avatar{
-    width:44px;height:44px;border-radius:10px;object-fit:cover;border:2px solid rgba(255,255,255,0.6);
-  }
-  .header-info{display:flex;flex-direction:column;gap:2px;}
-  .astro-name{font-weight:600;color:#1b1b1b;}
-  .astro-meta{font-size:12px;color:#333;opacity:0.85;display:flex;gap:8px;align-items:center;}
-  .online-dot{width:9px;height:9px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,0.45);display:inline-block;}
-
-  /* messages */
+  .astro-avatar{width:44px;height:44px;border-radius:10px;object-fit:cover;}
+  .header-info{display:flex;flex-direction:column;}
+  .astro-name{font-weight:600;color:#222;}
+  .astro-meta{font-size:12px;color:#333;opacity:0.9;display:flex;gap:4px;align-items:center;}
+  .online-dot{width:9px;height:9px;background:#2ecc71;border-radius:50%;box-shadow:0 0 6px rgba(46,204,113,0.45);}
   .messages{
-    flex:1;
-    padding:16px;
-    overflow-y:auto;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-    background:linear-gradient(180deg,#e6ded6 0%, #e5ddd5 100%);
+    flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+    background:linear-gradient(180deg,#e5ddd5,#e3dacb);
   }
-
   .msg-row{display:flex;flex-direction:column;max-width:78%;}
-  .msg {padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.3;box-shadow:0 2px 0 rgba(0,0,0,0.02);}
+  .msg{padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.3;box-shadow:0 1px 1px rgba(0,0,0,0.04);}
   .msg.me{align-self:flex-end;background:var(--me-bubble);border-bottom-right-radius:6px;}
   .msg.them{align-self:flex-start;background:var(--them-bubble);border-bottom-left-radius:6px;}
   .meta-row{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:12px;color:#556;}
-  .time{opacity:0.75;font-size:11px}
+  .time{opacity:0.7}
   .ticks{font-size:12px;color:#556}
-
-  /* shimmer loader */
-  .shimmer{
-    height:56px;border-radius:10px;background:linear-gradient(-90deg,#f3f3f3 0%, #e9e9e9 50%, #f3f3f3 100%);
-    background-size:200% 100%;animation:sh 1.2s linear infinite;
-  }
-  @keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
-
-  /* typing indicator */
-  .typing{font-size:13px;color:#222;padding:6px 12px;border-radius:12px;background:rgba(255,255,255,0.65);width:max-content;align-self:flex-start;display:flex;gap:8px;align-items:center;}
-  .typing .dot{width:6px;height:6px;background:#666;border-radius:50%;animation:bl 1s infinite;}
-  .typing .dot:nth-child(2){animation-delay:0.15s}
-  .typing .dot:nth-child(3){animation-delay:0.3s}
-  @keyframes bl{0%{opacity:0}50%{opacity:1}100%{opacity:0}}
-
-  /* input area */
-  .input-wrap{display:flex;gap:10px;padding:12px;border-top:1px solid rgba(15,23,42,0.04);background:white;align-items:center}
+  .typing{font-size:13px;color:#222;padding:6px 12px;border-radius:12px;background:rgba(255,255,255,0.7);width:max-content;margin-left:12px;display:flex;gap:6px;align-items:center;}
+  .typing .dot{width:6px;height:6px;background:#444;border-radius:50%;animation:blink 1s infinite;}
+  @keyframes blink{0%{opacity:0}50%{opacity:1}100%{opacity:0}}
+  .input-wrap{display:flex;gap:10px;padding:12px;border-top:1px solid rgba(0,0,0,0.05);background:white;}
   .input-box{flex:1;display:flex;align-items:center;gap:8px;background:#f6f7fb;padding:8px 10px;border-radius:999px;border:1px solid rgba(12,17,23,0.04);}
-  .input-box input{border:0;background:transparent;outline:0;padding:8px 6px;font-size:15px;width:100%}
-  .btn{background:linear-gradient(90deg,#fb8b55,#f8cfa7);border-radius:999px;padding:9px 14px;border:0;color:#111;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(248,207,175,0.28)}
+  .input-box input{border:0;background:transparent;outline:0;font-size:15px;width:100%}
+  .btn{background:linear-gradient(90deg,#fb8b55,#f8cfa7);border-radius:999px;padding:9px 14px;border:0;color:#111;font-weight:600;cursor:pointer;}
   .icon-btn{background:transparent;border:0;padding:6px;cursor:pointer;font-size:18px}
-
-  /* emoji popup */
   .emoji-pop{position:absolute;bottom:78px;right:18px;background:white;padding:8px;border-radius:12px;box-shadow:var(--shadow);display:flex;gap:8px;flex-wrap:wrap;width:220px}
-
-  /* scroll-to-bottom button */
-  .scroll-bottom{position:absolute;right:16px;bottom:110px;background:white;border-radius:999px;padding:8px;box-shadow:0 10px 30px rgba(11,17,30,0.12);cursor:pointer}
-
-  /* small screens */
-  @media (max-width:480px){
-    .chat-card{height:88vh;border-radius:14px}
-    .emoji-pop{right:12px;bottom:90px}
-  }
 </style>
 </head>
 <body>
+
 <div class="host-wrap">
-  <div class="chat-card" role="application" aria-label="Chat">
+  <div class="chat-card">
+    
     <div class="chat-header">
-      <img id="astroAvatar" class="astro-avatar" src="" alt="astrologer photo">
+      <img id="astroAvatar" class="astro-avatar" src="" alt="">
       <div class="header-info">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div id="astroName" class="astro-name">Astrologer</div>
-          <div id="onlineBadge" class="astro-meta"><span class="online-dot"></span><span style="font-size:12px;color:#333;opacity:0.9">Online</span></div>
-        </div>
-        <div id="astroSub" class="astro-meta">Here to help you • <span id="sessionsCount">0</span> sessions</div>
+        <div class="astro-name" id="astroName">Astrologer</div>
+        <div class="astro-meta"><span class="online-dot"></span><span id="onlineText">Online</span></div>
       </div>
     </div>
 
-    <div id="messages" class="messages" aria-live="polite">
-      <!-- shimmer while loading -->
-      <div id="loadingShimmer" class="shimmer"></div>
-    </div>
+    <div id="messages" class="messages"></div>
 
-    <div id="typingWrap" style="padding-left:16px;display:none"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div style="margin-left:6px;font-size:13px">Astrologer is typing…</div></div></div>
+    <div id="typingIndicator" class="typing" style="display:none;">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>Typing…
+    </div>
 
     <div class="input-wrap">
       <div class="input-box" style="position:relative">
-        <button id="emojiBtn" class="icon-btn" title="Emoji">😊</button>
-        <input id="textInput" placeholder="Type your message..." aria-label="Message input" />
+        <button id="emojiBtn" class="icon-btn">😊</button>
+        <input id="textInput" placeholder="Type message...">
       </div>
       <button id="sendBtn" class="btn">Send</button>
     </div>
 
-    <div id="scrollBtn" class="scroll-bottom" title="Scroll to bottom" style="display:none">↓</div>
   </div>
 </div>
 
-<!-- PubNub SDK -->
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 <script>
-/* =================== CONFIG =================== */
-const PUB_KEY = "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc";
-const SUB_KEY = "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2";
-
-/* Astrologers map: you can replace image URLs with your real images */
+/* ==============================
+     ASTRO MAP (multi-astro ready)
+============================== */
 const ASTROS = {
-  astro1: { name: "Rohit Sharma", img: "https://i.pravatar.cc/150?img=32" },
-  astro2: { name: "Maya Verma", img: "https://i.pravatar.cc/150?img=47" },
-  astro3: { name: "Neha Singh", img: "https://i.pravatar.cc/150?img=12" },
-  astro4: { name: "Arjun Patel", img: "https://i.pravatar.cc/150?img=5" },
-  astro5: { name: "Priya Rao", img: "https://i.pravatar.cc/150?img=65" }
+  Gautam: {
+    name: "Gautam",
+    img: "https://via.placeholder.com/150?text=Astro",   // replace later
+  },
+  // add more like:
+  // astro1: { name: "Rohit", img:"url" }
 };
 
-/* utility - get astrologer id from URL ?astro=astro1 */
-function getAstroKey(){
-  const params = new URLSearchParams(location.search);
-  const a = params.get('astro');
-  return ASTROS[a] ? a : 'astro1';
-}
+/* ==============================
+     GET ASTRO KEY
+============================== */
+const params = new URLSearchParams(window.location.search);
+let astroKey = params.get("astro") || "Gautam";
 
-/* uuid for user (customer) */
+if(!ASTROS[astroKey]) astroKey = "Gautam";
+
+/* Set UI */
+document.getElementById("astroName").textContent = ASTROS[astroKey].name;
+document.getElementById("astroAvatar").src = ASTROS[astroKey].img;
+
+/* ==============================
+     UNIQUE CUSTOMER ID
+============================== */
 function getUUID(){
-  let u = localStorage.getItem('astro_chat_uuid');
+  let u = localStorage.getItem("astro_user_uuid");
   if(!u){
-    u = 'guest_' + Math.random().toString(36).slice(2,10);
-    localStorage.setItem('astro_chat_uuid', u);
+    u = "u_" + Math.random().toString(36).slice(2,10);
+    localStorage.setItem("astro_user_uuid", u);
   }
   return u;
 }
-
-/* =================== INIT UI =================== */
-const astroKey = getAstroKey();
-const astro = ASTROS[astroKey];
-document.getElementById('astroAvatar').src = astro.img;
-document.getElementById('astroName').textContent = astro.name;
-document.getElementById('astroSub').textContent = 'Connected with ' + astro.name;
-
-/* elements */
-const messagesEl = document.getElementById('messages');
-const loadingShimmer = document.getElementById('loadingShimmer');
-const typingWrap = document.getElementById('typingWrap');
-const textInput = document.getElementById('textInput');
-const sendBtn = document.getElementById('sendBtn');
-const emojiBtn = document.getElementById('emojiBtn');
-const scrollBtn = document.getElementById('scrollBtn');
-
 const UUID = getUUID();
-const CHANNEL = `session_${astroKey}_${UUID}`; // channel per astro + user
 
-/* =================== PUBNUB =================== */
+/* CHANNEL = session_astro_key_uuid */
+const CHANNEL = `session_${astroKey}_${UUID}`;
+const CONTROL = `astro_${astroKey}_control`;
+
+/* ==============================
+     INIT PUBNUB
+============================== */
 const pubnub = new PubNub({
-  publishKey: PUB_KEY,
-  subscribeKey: SUB_KEY,
+  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
+  subscribeKey:"sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
   uuid: UUID
 });
 
-let pendingStatus = {}; // map messageId -> dom element for ticks
+/* ==============================
+     SEND JOIN EVENT
+============================== */
+pubnub.publish({
+  channel: CONTROL,
+  message: {
+    type: "join",
+    astro: astroKey,
+    uuid: UUID,
+    channel: CHANNEL,
+    ts: Date.now()
+  }
+});
 
+/* ON WINDOW CLOSE -> LEAVE EVENT */
+window.addEventListener("beforeunload", () => {
+  pubnub.publish({
+    channel: CONTROL,
+    message: {
+      type: "leave",
+      astro: astroKey,
+      uuid: UUID,
+      channel: CHANNEL,
+      ts: Date.now()
+    }
+  });
+});
+
+/* ==============================
+     SUBSCRIBE
+============================== */
+pubnub.subscribe({ channels: [CHANNEL] });
+
+/* ==============================
+     UI ELEMENTS
+============================== */
+const msgBox = document.getElementById("messages");
+const textInput = document.getElementById("textInput");
+const sendBtn = document.getElementById("sendBtn");
+const typingIndicator = document.getElementById("typingIndicator");
+
+/* ==============================
+     RECEIVE MESSAGES
+============================== */
 pubnub.addListener({
-  message: function(evt){
-    // incoming message (from other side)
-    const m = evt.message;
-    // ignore if it's our own published message echoed
+  message: (e) => {
+    const m = e.message;
     if(m.sender === UUID) return;
-    renderMessage(m, 'them');
-    // If incoming message corresponds to a pending outgoing-id, mark delivered
-    if(m.deliveredAckFor){
-      const el = pendingStatus[m.deliveredAckFor];
-      if(el) el.textContent = '✓✓';
-    }
+    appendMessage(m.text, "them", m.ts);
   },
-  signal: function(evt){
-    // typing signals
-    const s = evt.message;
-    if(s?.type === 'typing'){
-      if(s.from !== UUID && s.isTyping){
-        typingWrap.style.display = 'block';
-      } else {
-        typingWrap.style.display = 'none';
-      }
+  signal: (e) => {
+    const m = e.message;
+    if(m.type === "typing" && m.from !== UUID){
+      typingIndicator.style.display = m.isTyping ? "flex" : "none";
     }
-  },
-  presence: function(evt){
-    // you can use hereNow separately to update online count
-    updatePresence();
   }
 });
 
-// subscribe
-pubnub.subscribe({ channels: [CHANNEL], withPresence: true });
-
-// load history
-pubnub.history({ channel: CHANNEL, count: 50, includeTimetoken: true }, (status, res) => {
-  // remove shimmer
-  if(loadingShimmer) loadingShimmer.remove();
-  const msgs = (res.messages || []).map(it => it.entry);
-  msgs.forEach(m => renderMessage(m, m.sender === UUID ? 'me' : 'them'));
-  // show scroll to bottom if not at bottom
-  scrollToBottom();
-});
-
-/* presence/online count */
-function updatePresence(){
-  pubnub.hereNow({ channels: [CHANNEL] }, (s, r) => {
-    const count = r?.channels?.[CHANNEL]?.occupancy || 1;
-    document.getElementById('sessionsCount').textContent = count;
-    // show online dot only if count>1 (someone else is present)
-    document.querySelector('.online-dot').style.background = count>1 ? '#2ecc71' : '#f39c12';
-  });
-}
-updatePresence();
-
-/* ========== helpers for rendering ========== */
-function formatTime(ts){
-  const d = new Date(Number(ts) || Date.now());
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function renderMessage(message, who){
-  // message: { id, sender, text, ts, status }
-  const row = document.createElement('div');
-  row.className = 'msg-row';
-  const bubble = document.createElement('div');
-  bubble.className = 'msg ' + (who === 'me' ? 'me' : 'them');
-  bubble.style.opacity = 0;
-  bubble.style.transform = 'translateY(6px)';
-  bubble.innerText = message.text;
-  // meta row
-  const meta = document.createElement('div');
-  meta.className = 'meta-row';
-  const tm = document.createElement('span'); tm.className = 'time'; tm.textContent = formatTime(message.ts);
-  const ticks = document.createElement('span'); ticks.className = 'ticks';
-  // if me: prepare ticks element
-  if(who === 'me'){
-    ticks.textContent = message.status === 'delivered' ? '✓✓' : (message.status === 'sent' ? '✓' : '');
-    // store to update later if needed
-    if(message.id) pendingStatus[message.id] = ticks;
-  } else {
-    ticks.textContent = ''; // other side no ticks
-  }
-  meta.appendChild(tm); meta.appendChild(ticks);
-  row.appendChild(bubble); row.appendChild(meta);
-  messagesEl.appendChild(row);
-  // animate
-  requestAnimationFrame(()=> {
-    bubble.style.transition = 'all 180ms ease';
-    bubble.style.opacity = 1;
-    bubble.style.transform = 'translateY(0)';
-  });
-  // keep scroll if near bottom
-  const isNearBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 80;
-  if(isNearBottom) scrollToBottom();
-  else showScrollBtn();
-}
-
-/* ========== sending flow ========== */
-function sendMessage(text){
+/* ==============================
+     SEND MESSAGE
+============================== */
+function sendMessage(){
+  const text = textInput.value.trim();
   if(!text) return;
-  const msgObj = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), sender: UUID, text, ts: Date.now(), status: 'sending' };
-  // render locally with sending tick
-  renderMessage(msgObj, 'me');
 
-  // publish to pubnub, and on success mark sent
-  pubnub.publish({ channel: CHANNEL, message: msgObj }, function(status, response){
-    if(!status.error){
-      // mark sent
-      const el = pendingStatus[msgObj.id];
-      if(el) el.textContent = '✓';
-      // optionally signal presence to astrologer to ack delivered
-    } else {
-      // TODO: show send failed
-      const el = pendingStatus[msgObj.id];
-      if(el) el.textContent = '!';
-    }
-  });
+  const msg = {
+    id: Date.now().toString(36),
+    sender: UUID,
+    text,
+    ts: Date.now(),
+    status: "sent"
+  };
+
+  appendMessage(text, "me", msg.ts);
+
+  pubnub.publish({ channel: CHANNEL, message: msg });
+
+  textInput.value = "";
+  textInput.focus();
 }
 
-/* ========== typing signals ========== */
-let typingTimer;
-textInput.addEventListener('input', () => {
-  pubnub.signal({ channel: CHANNEL, message: { type: 'typing', from: UUID, isTyping: true }});
-  clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => {
-    pubnub.signal({ channel: CHANNEL, message: { type: 'typing', from: UUID, isTyping: false }});
+sendBtn.onclick = sendMessage;
+textInput.addEventListener("keydown", e=>{
+  if(e.key==="Enter") sendMessage();
+});
+
+/* ==============================
+     TYPING INDICATOR
+============================== */
+let typingTimeout;
+textInput.addEventListener("input", () => {
+  pubnub.signal({
+    channel: CHANNEL,
+    message: { type:"typing", from:UUID, isTyping:true }
+  });
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(()=>{
+    pubnub.signal({
+      channel: CHANNEL,
+      message: { type:"typing", from:UUID, isTyping:false }
+    });
   }, 1200);
 });
 
-/* send button & enter */
-sendBtn.addEventListener('click', () => {
-  const v = textInput.value.trim(); if(!v) return;
-  sendMessage(v); textInput.value = ''; textInput.focus();
-});
-textInput.addEventListener('keydown', (e) => {
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
-});
+/* ==============================
+     RENDER MESSAGE
+============================== */
+function appendMessage(text, who, ts){
+  const row = document.createElement("div");
+  row.className = "msg-row";
 
-/* ========== emoji picker (simple) ========== */
-const emojis = ['😀','😃','😊','😍','🙏','🔥','✨','🌙','🔮','💫','🪄','💬','👍','🎯','💛'];
-let emojiPop;
-emojiBtn.addEventListener('click', ()=> {
-  if(emojiPop){
-    emojiPop.remove(); emojiPop = null; return;
+  const b = document.createElement("div");
+  b.className = "msg " + who;
+  b.textContent = text;
+
+  const meta = document.createElement("div");
+  meta.className = "meta-row";
+
+  const t = document.createElement("span");
+  t.className = "time";
+  t.textContent = new Date(ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+
+  meta.appendChild(t);
+
+  row.appendChild(b);
+  row.appendChild(meta);
+
+  msgBox.appendChild(row);
+  msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+/* ==============================
+     EMOJI PICKER
+============================== */
+const emojiBtn = document.getElementById("emojiBtn");
+let emojiPopup;
+
+emojiBtn.onclick = ()=>{
+  if(emojiPopup){
+    emojiPopup.remove();
+    emojiPopup = null;
+    return;
   }
-  emojiPop = document.createElement('div');
-  emojiPop.className = 'emoji-pop';
-  emojis.forEach(e => {
-    const el = document.createElement('button');
-    el.textContent = e; el.style.fontSize = '20px'; el.style.border = 'none'; el.style.background='transparent'; el.style.cursor='pointer';
-    el.addEventListener('click', ()=>{ textInput.value += e; textInput.focus(); emojiPop.remove(); emojiPop=null; });
-    emojiPop.appendChild(el);
+  emojiPopup = document.createElement("div");
+  emojiPopup.className = "emoji-pop";
+
+  ["😀","😃","😊","😍","🙏","✨","🌙","🔮","💫","👍"].forEach(e=>{
+    const b = document.createElement("button");
+    b.textContent = e;
+    b.style.fontSize="20px";
+    b.style.border="none";
+    b.style.background="transparent";
+    b.style.cursor="pointer";
+    b.onclick = ()=>{
+      textInput.value += e;
+      emojiPopup.remove();
+      emojiPopup = null;
+      textInput.focus();
+    };
+    emojiPopup.appendChild(b);
   });
-  document.body.appendChild(emojiPop);
-});
 
-/* ========== scroll to bottom behavior ========== */
-function scrollToBottom(){ messagesEl.scrollTop = messagesEl.scrollHeight; scrollBtn.style.display = 'none'; }
-function showScrollBtn(){ scrollBtn.style.display = 'block'; }
-messagesEl.addEventListener('scroll', ()=> {
-  const near = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 120;
-  if(near) scrollBtn.style.display = 'none'; else scrollBtn.style.display = 'block';
-});
-scrollBtn.addEventListener('click', scrollToBottom);
-
-/* show typing indicator on load if recently signaled */
-setTimeout(()=>{ typingWrap.style.display='none'; }, 1500);
-
-/* Expose a small API for astrologer to send delivered ack (optional) */
-/* If the astrologer UI publishes {deliveredAckFor: id, sender: astroKey} it will update ticks of user */
-pubnub.addListener({
-  message: function(evt){
-    const m = evt.message;
-    if(m.deliveredAckFor){
-      const el = pendingStatus[m.deliveredAckFor];
-      if(el) el.textContent = '✓✓';
-    }
-  }
-});
-
+  document.body.appendChild(emojiPopup);
+};
 </script>
 </body>
 </html>
