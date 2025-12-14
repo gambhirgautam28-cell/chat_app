@@ -5,7 +5,7 @@
   <title>Chat with Astrologer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- 🔴 Firebase COMPAT SDKs (DO NOT CHANGE) -->
+  <!-- 🔴 Firebase COMPAT SDKs (DO NOT CHANGE THESE) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
@@ -83,6 +83,7 @@
       padding: 12px;
       background: white;
       border-bottom: 1px solid #ddd;
+      z-index: 10;
     }
 
     .start-btn {
@@ -106,7 +107,14 @@
 
   <!-- START CHAT -->
   <div class="start-wrap">
-    <button id="startBtn" class="start-btn">Start Chat</button>
+    <button
+      id="startBtn"
+      class="start-btn"
+      type="button"
+      onclick="startChat()"
+    >
+      Start Chat
+    </button>
   </div>
 
   <!-- CHAT -->
@@ -115,12 +123,13 @@
   <!-- FOOTER -->
   <div class="footer">
     <input id="msgInput" placeholder="Type a message…" />
-    <button id="sendBtn">Send</button>
+    <button onclick="sendMessage()">Send</button>
   </div>
 
-<!-- 🔴 FINAL SCRIPT (DO NOT SPLIT / DO NOT MOVE) -->
 <script>
-  /************* FIREBASE INIT *************/
+  /************************************************
+   * FIREBASE INITIALIZATION (RUNS FIRST)
+   ************************************************/
   const firebaseConfig = {
     apiKey:  "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
     authDomain: "connect-astro-e5309.firebaseapp.com",
@@ -130,12 +139,16 @@
   firebase.initializeApp(firebaseConfig);
   const functions = firebase.functions("asia-south1");
 
-  /************* STATE *************/
-  const CUSTOMER_ID = "cust_a82k19";
+  /************************************************
+   * GLOBAL STATE
+   ************************************************/
+  const CUSTOMER_ID = "cust_a82k19";   // later from auth/payment
   const ASTROLOGER_ID = "Gautam";
   let sessionId = null;
 
-  /************* START CHAT *************/
+  /************************************************
+   * START CHAT
+   ************************************************/
   async function startChat() {
     try {
       console.log("Starting chat…");
@@ -155,13 +168,15 @@
       } else {
         alert(res.data.message || "Astrologer busy");
       }
-    } catch (e) {
-      console.error(e);
-      alert(e.message || "Error starting chat");
+    } catch (err) {
+      console.error("Error starting chat:", err);
+      alert(err.message || "Error starting chat");
     }
   }
 
-  /************* SEND MESSAGE *************/
+  /************************************************
+   * SEND MESSAGE
+   ************************************************/
   async function sendMessage() {
     if (!sessionId) {
       alert("Start chat first");
@@ -183,18 +198,17 @@
     });
   }
 
+  /************************************************
+   * UI HELPER
+   ************************************************/
   function addMessage(text) {
     const div = document.createElement("div");
     div.className = "message me";
     div.textContent = text;
     document.getElementById("chatBox").appendChild(div);
+    document.getElementById("chatBox").scrollTop =
+      document.getElementById("chatBox").scrollHeight;
   }
-
-  /************* EVENTS *************/
-  document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("startBtn").addEventListener("click", startChat);
-    document.getElementById("sendBtn").addEventListener("click", sendMessage);
-  });
 </script>
 
 </body>
