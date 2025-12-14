@@ -3,94 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <title>Chat with Astrologer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Firebase SDKs (COMPAT – IMPORTANT) -->
+  <!-- Firebase COMPAT SDKs (VERY IMPORTANT) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f6f2ec;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      background: #f5f5f5;
     }
 
     .header {
-      background: #9b2c2c;
-      color: #fff;
-      padding: 14px;
+      background: #8b1d2c;
+      color: white;
+      padding: 12px;
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    .header img {
+    .avatar {
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #fff;
+      background: #ddd;
     }
 
-    .header .title {
-      font-weight: 700;
-      font-size: 16px;
-    }
-
-    .messages {
-      flex: 1;
-      padding: 12px;
+    .chat-box {
+      padding: 16px;
+      height: calc(100vh - 190px);
       overflow-y: auto;
-      background: #f6f2ec;
+      background: #fafafa;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .me {
+      background: #ffe6d5;
+      margin-left: auto;
+    }
+
+    .them {
+      background: #fff;
     }
 
     .footer {
-      padding: 10px;
+      padding: 12px;
+      background: white;
       border-top: 1px solid #ddd;
-      background: #fff;
+      display: flex;
+      gap: 8px;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #ddd;
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .send-btn {
+      background: #f4b183;
     }
 
     .start-btn {
-      width: 100%;
-      padding: 14px;
-      border-radius: 999px;
-      border: none;
-      background: linear-gradient(90deg,#fb8b55,#f8cfa7);
-      font-weight: 700;
+      width: calc(100% - 24px);
+      margin: 12px;
+      background: #f4b183;
       font-size: 16px;
-      cursor: pointer;
-    }
-
-    .timer {
-      text-align: center;
-      margin-top: 6px;
-      font-weight: 700;
-    }
-
-    .input-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .input-row input {
-      flex: 1;
-      padding: 12px;
-      border-radius: 999px;
-      border: 1px solid #ccc;
-    }
-
-    .input-row button {
-      padding: 12px 20px;
-      border-radius: 999px;
-      border: none;
-      background: #f8cfa7;
-      font-weight: 700;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -99,106 +96,111 @@
 
   <!-- HEADER -->
   <div class="header">
-    <img src="https://via.placeholder.com/36" />
-    <div class="title">Astrologer Gautam</div>
-  </div>
-
-  <!-- CHAT AREA -->
-  <div class="messages" id="messages"></div>
-
-  <!-- FOOTER -->
-  <div class="footer">
-    <button class="start-btn" id="startBtn" onclick="startChat()">Start Chat</button>
-    <div class="timer" id="timer">5:00</div>
-
-    <div class="input-row">
-      <input id="msgInput" placeholder="Type a message..." />
-      <button onclick="sendMessage()">Send</button>
+    <div class="avatar"></div>
+    <div>
+      <div><strong>Astrologer Gautam</strong></div>
+      <div style="font-size:12px;opacity:0.8">Online</div>
     </div>
   </div>
 
-  <!-- SCRIPT -->
-  <script>
-    /************* FIREBASE INIT *************/
-    const firebaseConfig = {
-      apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
-      authDomain: "connect-astro-e5309.firebaseapp.com",
-      projectId: "connect-astro-e5309"
-    };
+  <!-- START CHAT -->
+  <button id="startBtn" class="start-btn" onclick="startChat()">
+    Start Chat
+  </button>
 
-    firebase.initializeApp(firebaseConfig);
+  <!-- CHAT -->
+  <div id="chatBox" class="chat-box"></div>
 
-    const db = firebase.firestore();
-    const functions = firebase.functions("asia-south1");
+  <!-- FOOTER -->
+  <div class="footer">
+    <input id="msgInput" placeholder="Type a message…" />
+    <button class="send-btn" onclick="sendMessage()">Send</button>
+  </div>
 
-    /************* GLOBAL STATE *************/
-    let sessionId = null;
-    let remainingSeconds = 300;
+<script>
+  // -----------------------------------
+  // FIREBASE INIT (REPLACE API KEY ONLY)
+  // -----------------------------------
+  const firebaseConfig = {
+    apiKey:  "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
+    authDomain: "connect-astro-e5309.firebaseapp.com",
+    projectId: "connect-astro-e5309",
+  };
 
-    const CUSTOMER_ID = "cust_a82k19";
-    const ASTROLOGER_ID = "Gautam";
+  firebase.initializeApp(firebaseConfig);
 
-    /************* START CHAT *************/
-    async function startChat() {
-      try {
-        const chatNow = functions.httpsCallable("chatNow");
-        const res = await chatNow({
-          customerId: CUSTOMER_ID,
-          astrologerId: ASTROLOGER_ID
-        });
+  const functions = firebase.functions("asia-south1");
 
-        if (res.data.sessionId) {
-          sessionId = res.data.sessionId;
-          alert("Chat started");
-          document.getElementById("startBtn").disabled = true;
-        } else {
-          alert(res.data.message);
-        }
-      } catch (e) {
-        console.error(e);
-        alert("Error starting chat");
-      }
-    }
+  // -----------------------------------
+  // STATE
+  // -----------------------------------
+  const CUSTOMER_ID = "cust_a82k19";
+  const ASTROLOGER_ID = "Gautam";
+  let sessionId = null;
 
-    /************* SEND MESSAGE *************/
-    async function sendMessage() {
-      if (!sessionId) {
-        alert("Start chat first");
-        return;
-      }
+  // -----------------------------------
+  // START CHAT
+  // -----------------------------------
+  async function startChat() {
+    try {
+      console.log("Starting chat...");
 
-      const text = document.getElementById("msgInput").value;
-      if (!text) return;
-
-      document.getElementById("msgInput").value = "";
-
-      const sendMessageFn = functions.httpsCallable("sendMessage");
-      await sendMessageFn({
-        sessionId,
-        senderId: CUSTOMER_ID,
-        text
+      const chatNow = functions.httpsCallable("chatNow");
+      const res = await chatNow({
+        customerId: CUSTOMER_ID,
+        astrologerId: ASTROLOGER_ID,
       });
+
+      console.log(res.data);
+
+      if (res.data.status === "session_started") {
+        sessionId = res.data.sessionId;
+        document.getElementById("startBtn").style.display = "none";
+        alert("Chat started");
+      } else {
+        alert(res.data.message);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error starting chat");
+    }
+  }
+
+  // -----------------------------------
+  // SEND MESSAGE
+  // -----------------------------------
+  async function sendMessage() {
+    if (!sessionId) {
+      alert("Start chat first");
+      return;
     }
 
-    /************* TIMER UI *************/
-    setInterval(() => {
-      if (!sessionId) return;
+    const input = document.getElementById("msgInput");
+    const text = input.value.trim();
+    if (!text) return;
 
-      remainingSeconds--;
-      if (remainingSeconds <= 0) {
-        document.getElementById("timer").innerText = "00:00";
-        alert("Your chat is finished");
-        return;
-      }
+    input.value = "";
 
-      const min = Math.floor(remainingSeconds / 60);
-      const sec = remainingSeconds % 60;
-      document.getElementById("timer").innerText =
-        `${min}:${sec.toString().padStart(2, "0")}`;
-    }, 1000);
-  </script>
+    addMessage(text, "me");
+
+    const sendMsg = functions.httpsCallable("sendMessage");
+    await sendMsg({
+      sessionId,
+      senderId: CUSTOMER_ID,
+      text,
+    });
+  }
+
+  function addMessage(text, type) {
+    const div = document.createElement("div");
+    div.className = "message " + type;
+    div.textContent = text;
+    document.getElementById("chatBox").appendChild(div);
+  }
+</script>
 
 </body>
 </html>
+
 
 
