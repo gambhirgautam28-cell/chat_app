@@ -8,6 +8,9 @@
   <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+  <button onclick="startChat()">Start Chat</button>
+<div id="timer">5:00</div>
+
 
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
@@ -110,6 +113,50 @@ function add(t,cls){
   // Firebase services
   const functions = firebase.functions("asia-south1");
   const db = firebase.firestore();
+</script>
+<script>
+async function startChat() {
+  try {
+    const chatNow = functions.httpsCallable("chatNow");
+
+    const res = await chatNow({
+      customerId: "cust_a82k19",
+      astrologerId: "Gautam"
+    });
+
+    if (res.data.status === "session_started") {
+      window.sessionId = res.data.sessionId;
+      alert("Chat started");
+      listenToSession(sessionId);
+    }
+
+    if (res.data.status === "queued") {
+      alert("Astrologer is busy. Please wait.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Error starting chat");
+  }
+}
+
+function listenToSession(sessionId) {
+  db.collection("sessions")
+    .doc(sessionId)
+    .onSnapshot((doc) => {
+      if (!doc.exists) return;
+
+      const data = doc.data();
+      const s = data.remainingSeconds;
+
+      document.getElementById("timer").innerText =
+        Math.floor(s / 60) + ":" + (s % 60).toString().padStart(2, "0");
+
+      if (data.status === "completed") {
+        alert("Chat finished");
+        location.reload();
+      }
+    });
+}
 </script>
 
 </body>
