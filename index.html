@@ -5,14 +5,14 @@
   <title>Chat with Astrologer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- 🔴 Firebase COMPAT SDKs (DO NOT CHANGE THESE) -->
+  <!-- Firebase COMPAT SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
   <style>
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      font-family: system-ui;
       background: #f6f2ec;
       height: 100vh;
       display: flex;
@@ -35,11 +35,16 @@
       background: #ddd;
     }
 
+    .start-wrap {
+      padding: 12px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+    }
+
     .chat-box {
       flex: 1;
       padding: 14px;
       overflow-y: auto;
-      background: #f6f2ec;
     }
 
     .message {
@@ -47,10 +52,6 @@
       padding: 10px 12px;
       border-radius: 12px;
       margin-bottom: 8px;
-      font-size: 14px;
-    }
-
-    .me {
       background: #ffe6d5;
       margin-left: auto;
     }
@@ -78,141 +79,117 @@
       font-weight: 700;
       cursor: pointer;
     }
-
-    .start-wrap {
-      padding: 12px;
-      background: white;
-      border-bottom: 1px solid #ddd;
-      z-index: 10;
-    }
-
-    .start-btn {
-      width: 100%;
-      padding: 14px;
-      font-size: 16px;
-    }
   </style>
 </head>
 
 <body>
 
-  <!-- HEADER -->
   <div class="header">
     <div class="avatar"></div>
     <div>
-      <div><strong>Astrologer Gautam</strong></div>
-      <div style="font-size:12px;opacity:.8">Online</div>
+      <strong>Astrologer Gautam</strong><br />
+      <small>Online</small>
     </div>
   </div>
 
-  <!-- START CHAT -->
   <div class="start-wrap">
-    <button
-      id="startBtn"
-      class="start-btn"
-      type="button"
-      onclick="startChat()"
-    >
-      Start Chat
-    </button>
+    <button onclick="window.startChat()">Start Chat</button>
   </div>
 
-  <!-- CHAT -->
   <div id="chatBox" class="chat-box"></div>
 
-  <!-- FOOTER -->
   <div class="footer">
     <input id="msgInput" placeholder="Type a message…" />
-    <button onclick="sendMessage()">Send</button>
+    <button onclick="window.sendMessage()">Send</button>
   </div>
 
 <script>
-  /************************************************
-   * FIREBASE INITIALIZATION (RUNS FIRST)
-   ************************************************/
-  const firebaseConfig = {
-    apiKey:  "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
-    authDomain: "connect-astro-e5309.firebaseapp.com",
-    projectId: "connect-astro-e5309",
-  };
+/* =====================================================
+   FIREBASE INIT — ATTACHED TO WINDOW (SAFE)
+===================================================== */
 
-  firebase.initializeApp(firebaseConfig);
-  const functions = firebase.functions("asia-south1");
+window.firebaseConfig = {
+  apiKey:  "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
+  authDomain: "connect-astro-e5309.firebaseapp.com",
+  projectId: "connect-astro-e5309",
+};
 
-  /************************************************
-   * GLOBAL STATE
-   ************************************************/
-  const CUSTOMER_ID = "cust_a82k19";   // later from auth/payment
-  const ASTROLOGER_ID = "Gautam";
-  let sessionId = null;
+firebase.initializeApp(window.firebaseConfig);
 
-  /************************************************
-   * START CHAT
-   ************************************************/
-  async function startChat() {
-    try {
-      console.log("Starting chat…");
+/* attach functions to window */
+window.fbFunctions = firebase.functions("asia-south1");
 
-      const chatNow = functions.httpsCallable("chatNow");
-      const res = await chatNow({
-        customerId: CUSTOMER_ID,
-        astrologerId: ASTROLOGER_ID,
-      });
+/* =====================================================
+   STATE
+===================================================== */
 
-      console.log("chatNow response:", res.data);
+window.CUSTOMER_ID = "cust_a82k19";
+window.ASTROLOGER_ID = "Gautam";
+window.sessionId = null;
 
-      if (res.data.status === "session_started") {
-        sessionId = res.data.sessionId;
-        document.getElementById("startBtn").style.display = "none";
-        alert("Chat started");
-      } else {
-        alert(res.data.message || "Astrologer busy");
-      }
-    } catch (err) {
-      console.error("Error starting chat:", err);
-      alert(err.message || "Error starting chat");
-    }
-  }
+/* =====================================================
+   START CHAT
+===================================================== */
 
-  /************************************************
-   * SEND MESSAGE
-   ************************************************/
-  async function sendMessage() {
-    if (!sessionId) {
-      alert("Start chat first");
-      return;
-    }
+window.startChat = async function () {
+  try {
+    console.log("Starting chat…");
 
-    const input = document.getElementById("msgInput");
-    const text = input.value.trim();
-    if (!text) return;
+    const chatNow = window.fbFunctions.httpsCallable("chatNow");
 
-    input.value = "";
-    addMessage(text);
-
-    const sendMessageFn = functions.httpsCallable("sendMessage");
-    await sendMessageFn({
-      sessionId,
-      senderId: CUSTOMER_ID,
-      text,
+    const res = await chatNow({
+      customerId: window.CUSTOMER_ID,
+      astrologerId: window.ASTROLOGER_ID,
     });
+
+    console.log("Response:", res.data);
+
+    if (res.data.status === "session_started") {
+      window.sessionId = res.data.sessionId;
+      alert("Chat started");
+    } else {
+      alert(res.data.message || "Astrologer busy");
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Error starting chat");
+  }
+};
+
+/* =====================================================
+   SEND MESSAGE
+===================================================== */
+
+window.sendMessage = async function () {
+  if (!window.sessionId) {
+    alert("Start chat first");
+    return;
   }
 
-  /************************************************
-   * UI HELPER
-   ************************************************/
-  function addMessage(text) {
-    const div = document.createElement("div");
-    div.className = "message me";
-    div.textContent = text;
-    document.getElementById("chatBox").appendChild(div);
-    document.getElementById("chatBox").scrollTop =
-      document.getElementById("chatBox").scrollHeight;
-  }
+  const input = document.getElementById("msgInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = "";
+
+  const div = document.createElement("div");
+  div.className = "message";
+  div.textContent = text;
+  document.getElementById("chatBox").appendChild(div);
+
+  const sendMessageFn = window.fbFunctions.httpsCallable("sendMessage");
+
+  await sendMessageFn({
+    sessionId: window.sessionId,
+    senderId: window.CUSTOMER_ID,
+    text,
+  });
+};
 </script>
 
 </body>
 </html>
+
 
 
 
