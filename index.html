@@ -1,127 +1,236 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Astro Chat — Customer</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Chat with Astrologer Gautam</title>
 
+<!-- PubNub SDK -->
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:system-ui, Inter;
-  background:#f2f2f2;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
+body {
+  margin: 0;
+  font-family: Inter, system-ui;
+  background: #f2f2f2;
+  display: flex;
+  justify-content: center;
+  height: 100vh;
 }
-.chat{
-  width:360px;
-  height:620px;
-  background:#fff;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,.15);
-  display:flex;
-  flex-direction:column;
+
+/* Container */
+.chat-wrap {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
 }
-.header{
-  padding:14px;
-  background:#F8CFAF;
-  border-radius:18px 18px 0 0;
-  font-weight:700;
+
+/* Header */
+.chat-header {
+  background: #9b2c33;
+  color: #fff;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-.messages{
-  flex:1;
-  padding:14px;
-  overflow:auto;
-  background:#efe6dc;
+
+.astro-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.bubble{
-  padding:10px 14px;
-  border-radius:14px;
-  margin-bottom:8px;
-  max-width:70%;
+
+.astro-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
 }
-.me{background:#dcf8c6;margin-left:auto;}
-.them{background:#fff;}
-.input{
-  display:flex;
-  gap:8px;
-  padding:12px;
+
+.astro-name {
+  font-weight: 600;
+  font-size: 15px;
 }
-input{
-  flex:1;
-  padding:10px;
-  border-radius:999px;
-  border:1px solid #ddd;
+
+.end-chat {
+  border: 1.5px solid #fff;
+  background: transparent;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
 }
-button{
-  padding:10px 16px;
-  border-radius:999px;
-  border:none;
-  background:#fb8b55;
-  color:#fff;
-  font-weight:700;
-  cursor:pointer;
+
+/* Messages */
+.messages {
+  flex: 1;
+  padding: 14px;
+  overflow-y: auto;
+  background: #e5ddd5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bubble {
+  max-width: 75%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.me {
+  align-self: flex-end;
+  background: #dcf8c6;
+}
+
+.them {
+  align-self: flex-start;
+  background: #fff;
+}
+
+/* Composer */
+.composer {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  background: #fff;
+  border-top: 1px solid #eee;
+}
+
+.composer input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+}
+
+.composer button {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #f8cfa7;
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>
 </head>
 
 <body>
 
-<div class="chat">
-  <div class="header">Chat with Gautam</div>
-  <div id="messages" class="messages"></div>
-  <div class="input">
-    <input id="text" placeholder="Type a message">
-    <button onclick="send()">Send</button>
+<div class="chat-wrap">
+
+  <!-- HEADER -->
+  <div class="chat-header">
+    <div class="astro-info">
+      <img
+        class="astro-avatar"
+        src="https://via.placeholder.com/150"
+        alt="Gautam"
+      />
+      <div class="astro-name">Astrologer Gautam</div>
+    </div>
+    <button class="end-chat">End Chat</button>
   </div>
+
+  <!-- MESSAGES -->
+  <div class="messages" id="messages"></div>
+
+  <!-- INPUT -->
+  <div class="composer">
+    <input id="input" placeholder="Type a message..." />
+    <button id="send">Send</button>
+  </div>
+
 </div>
 
 <script>
-/* CONFIG */
-const CHANNEL = "astro-Gautam";
+/* ---------- CONFIG ---------- */
+const ASTRO = "Gautam";
+const PUB_KEY = "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc";
+const SUB_KEY = "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2";
 
+/* Unique customer every time */
+const CUSTOMER_ID = "cust_" + Math.random().toString(36).slice(2, 10);
+const SESSION = `session_${ASTRO}_${CUSTOMER_ID}`;
+const CONTROL = `astro_${ASTRO}_control`;
+
+/* PubNub init */
 const pubnub = new PubNub({
-  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
-  subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
-  uuid: "customer-" + Math.random().toString(36).slice(2,6)
+  publishKey: PUB_KEY,
+  subscribeKey: SUB_KEY,
+  uuid: CUSTOMER_ID
 });
 
-/* Subscribe */
-pubnub.subscribe({ channels: [CHANNEL] });
+/* UI */
+const messagesEl = document.getElementById("messages");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("send");
 
-/* Receive messages (IGNORE OWN MESSAGES) */
-pubnub.addListener({
-  message: e => {
-    if (e.publisher === pubnub.getUUID()) return;
-    addBubble(e.message.text, "them");
+/* Subscribe */
+pubnub.subscribe({ channels: [SESSION] });
+
+/* Announce join */
+pubnub.publish({
+  channel: CONTROL,
+  message: {
+    type: "join",
+    astro: ASTRO,
+    channel: SESSION,
+    uuid: CUSTOMER_ID,
+    ts: Date.now()
   }
 });
 
-function send(){
-  const text = document.getElementById("text").value.trim();
-  if(!text) return;
+/* Listen */
+pubnub.addListener({
+  message: (e) => {
+    const m = e.message;
+    if (!m || !m.text) return;
+
+    const side = m.sender === CUSTOMER_ID ? "me" : "them";
+    addMessage(m.text, side);
+  }
+});
+
+/* Send */
+sendBtn.onclick = send;
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") send();
+});
+
+function send() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  const msg = {
+    sender: CUSTOMER_ID,
+    text: text,
+    ts: Date.now()
+  };
 
   pubnub.publish({
-    channel: CHANNEL,
-    message: { text }
+    channel: SESSION,
+    message: msg
   });
 
-  addBubble(text, "me");
-  document.getElementById("text").value="";
+  input.value = "";
 }
 
-function addBubble(text, who){
+/* Render */
+function addMessage(text, side) {
   const div = document.createElement("div");
-  div.className = "bubble " + who;
+  div.className = `bubble ${side}`;
   div.textContent = text;
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 </script>
 
 </body>
 </html>
+
