@@ -1,164 +1,204 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Chat with Astrologer Gautam</title>
+  <meta charset="UTF-8" />
+  <title>Chat with Astrologer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
-  <button onclick="startChat()">Start Chat</button>
-<div id="timer">5:00</div>
+  <!-- Firebase SDKs (COMPAT – IMPORTANT) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f6f2ec;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
+    .header {
+      background: #9b2c2c;
+      color: #fff;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-<style>
-body{margin:0;font-family:Inter,system-ui;background:#ece5dd;display:flex;justify-content:center;height:100vh}
-.chat{width:100%;max-width:420px;background:#fff;display:flex;flex-direction:column}
-.header{background:#9b2c33;color:#fff;padding:12px;display:flex;align-items:center;gap:10px}
-.avatar{width:42px;height:42px;border-radius:50%;background:#fff}
-.messages{flex:1;padding:14px;overflow:auto;display:flex;flex-direction:column;gap:8px}
-.bubble{max-width:75%;padding:10px 12px;border-radius:12px}
-.me{align-self:flex-end;background:#dcf8c6}
-.them{align-self:flex-start;background:#fff}
-.composer{display:flex;gap:8px;padding:10px;border-top:1px solid #eee}
-input{flex:1;padding:10px;border-radius:999px;border:1px solid #ddd}
-button{padding:10px 16px;border-radius:999px;border:none;background:#f8cfa7;font-weight:600}
-</style>
+    .header img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .header .title {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      background: #f6f2ec;
+    }
+
+    .footer {
+      padding: 10px;
+      border-top: 1px solid #ddd;
+      background: #fff;
+    }
+
+    .start-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(90deg,#fb8b55,#f8cfa7);
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .timer {
+      text-align: center;
+      margin-top: 6px;
+      font-weight: 700;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .input-row input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 999px;
+      border: 1px solid #ccc;
+    }
+
+    .input-row button {
+      padding: 12px 20px;
+      border-radius: 999px;
+      border: none;
+      background: #f8cfa7;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
 </head>
 
 <body>
-<div class="chat">
 
-<div class="header">
-  <img class="avatar" src="https://via.placeholder.com/150">
-  <div><b>Astrologer Gautam</b></div>
-</div>
+  <!-- HEADER -->
+  <div class="header">
+    <img src="https://via.placeholder.com/36" />
+    <div class="title">Astrologer Gautam</div>
+  </div>
 
-<div id="messages" class="messages"></div>
+  <!-- CHAT AREA -->
+  <div class="messages" id="messages"></div>
 
-<div class="composer">
-  <input id="text" placeholder="Type a message...">
-  <button onclick="send()">Send</button>
-</div>
+  <!-- FOOTER -->
+  <div class="footer">
+    <button class="start-btn" id="startBtn" onclick="startChat()">Start Chat</button>
+    <div class="timer" id="timer">5:00</div>
 
-</div>
+    <div class="input-row">
+      <input id="msgInput" placeholder="Type a message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
 
-<script>
-/* CONFIG */
-const ASTRO = "Gautam";
-const CUSTOMER_ID = "cust_" + Math.random().toString(36).slice(2,8);
-const SESSION = `astro_${ASTRO}_${CUSTOMER_ID}`;
-
-const pubnub = new PubNub({
-  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
-  subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
-  uuid: CUSTOMER_ID
-});
-
-/* subscribe */
-pubnub.subscribe({ channels:[SESSION] });
-
-/* announce join */
-pubnub.publish({
-  channel:`astro_${ASTRO}_control`,
-  message:{
-    type:"join",
-    astro:ASTRO,
-    session:SESSION,
-    customer:CUSTOMER_ID
-  }
-});
-
-/* receive */
-pubnub.addListener({
-  message:e=>{
-    const m=e.message;
-    if(!m || !m.text) return;
-    add(m.text, m.sender===CUSTOMER_ID ? "me":"them");
-  }
-});
-
-function send(){
-  const t=text.value.trim();
-  if(!t) return;
-  pubnub.publish({
-    channel:SESSION,
-    message:{ text:t, sender:CUSTOMER_ID }
-  });
-  text.value="";
-}
-
-function add(t,cls){
-  const d=document.createElement("div");
-  d.className="bubble "+cls;
-  d.textContent=t;
-  messages.appendChild(d);
-  messages.scrollTop=messages.scrollHeight;
-}
-</script>
+  <!-- SCRIPT -->
   <script>
-  // Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
-    authDomain: "connect-astro-e5309.firebaseapp.com",
-    projectId: "connect-astro-e5309",
-  };
+    /************* FIREBASE INIT *************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
+      authDomain: "connect-astro-e5309.firebaseapp.com",
+      projectId: "connect-astro-e5309"
+    };
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
 
-  // Firebase services
-  const functions = firebase.functions("asia-south1");
-  const db = firebase.firestore();
-</script>
-<script>
-async function startChat() {
-  try {
-    const chatNow = functions.httpsCallable("chatNow");
+    const db = firebase.firestore();
+    const functions = firebase.functions("asia-south1");
 
-    const res = await chatNow({
-      customerId: "cust_a82k19",
-      astrologerId: "Gautam"
-    });
+    /************* GLOBAL STATE *************/
+    let sessionId = null;
+    let remainingSeconds = 300;
 
-    if (res.data.status === "session_started") {
-      window.sessionId = res.data.sessionId;
-      alert("Chat started");
-      listenToSession(sessionId);
-    }
+    const CUSTOMER_ID = "cust_a82k19";
+    const ASTROLOGER_ID = "Gautam";
 
-    if (res.data.status === "queued") {
-      alert("Astrologer is busy. Please wait.");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Error starting chat");
-  }
-}
+    /************* START CHAT *************/
+    async function startChat() {
+      try {
+        const chatNow = functions.httpsCallable("chatNow");
+        const res = await chatNow({
+          customerId: CUSTOMER_ID,
+          astrologerId: ASTROLOGER_ID
+        });
 
-function listenToSession(sessionId) {
-  db.collection("sessions")
-    .doc(sessionId)
-    .onSnapshot((doc) => {
-      if (!doc.exists) return;
-
-      const data = doc.data();
-      const s = data.remainingSeconds;
-
-      document.getElementById("timer").innerText =
-        Math.floor(s / 60) + ":" + (s % 60).toString().padStart(2, "0");
-
-      if (data.status === "completed") {
-        alert("Chat finished");
-        location.reload();
+        if (res.data.sessionId) {
+          sessionId = res.data.sessionId;
+          alert("Chat started");
+          document.getElementById("startBtn").disabled = true;
+        } else {
+          alert(res.data.message);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Error starting chat");
       }
-    });
-}
-</script>
+    }
+
+    /************* SEND MESSAGE *************/
+    async function sendMessage() {
+      if (!sessionId) {
+        alert("Start chat first");
+        return;
+      }
+
+      const text = document.getElementById("msgInput").value;
+      if (!text) return;
+
+      document.getElementById("msgInput").value = "";
+
+      const sendMessageFn = functions.httpsCallable("sendMessage");
+      await sendMessageFn({
+        sessionId,
+        senderId: CUSTOMER_ID,
+        text
+      });
+    }
+
+    /************* TIMER UI *************/
+    setInterval(() => {
+      if (!sessionId) return;
+
+      remainingSeconds--;
+      if (remainingSeconds <= 0) {
+        document.getElementById("timer").innerText = "00:00";
+        alert("Your chat is finished");
+        return;
+      }
+
+      const min = Math.floor(remainingSeconds / 60);
+      const sec = remainingSeconds % 60;
+      document.getElementById("timer").innerText =
+        `${min}:${sec.toString().padStart(2, "0")}`;
+    }, 1000);
+  </script>
 
 </body>
 </html>
+
 
