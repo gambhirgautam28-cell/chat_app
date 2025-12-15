@@ -12,28 +12,41 @@
   <style>
     body {
       margin: 0;
-      font-family: system-ui;
+      font-family: system-ui, Arial;
       background: #f6f2ec;
       height: 100vh;
       display: flex;
       flex-direction: column;
     }
+
     .header {
       background: #8b1d2c;
       color: #fff;
       padding: 14px;
       display: flex;
-      gap: 10px;
       align-items: center;
+      gap: 10px;
     }
+
     .avatar {
       width: 36px;
       height: 36px;
       border-radius: 50%;
       background: #fff;
     }
-    .start { padding: 12px; background: #fff; }
-    .chat { flex: 1; padding: 14px; overflow-y: auto; }
+
+    .start {
+      padding: 12px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .chat {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+    }
+
     .msg {
       background: #ffe6d5;
       padding: 10px 12px;
@@ -42,14 +55,22 @@
       max-width: 70%;
       margin-left: auto;
     }
+
     .controls {
       padding: 12px;
       background: #fff;
+      border-top: 1px solid #ddd;
       display: flex;
       gap: 8px;
-      border-top: 1px solid #ddd;
     }
-    input { flex: 1; padding: 10px; border-radius: 20px; }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+    }
+
     button {
       padding: 10px 16px;
       border-radius: 20px;
@@ -63,46 +84,58 @@
 
 <body>
 
-<div class="header">
-  <div class="avatar"></div>
-  <div>
-    <strong>Astrologer Gautam</strong><br>
-    <small>Online</small>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="avatar"></div>
+    <div>
+      <strong>Astrologer Gautam</strong><br />
+      <small>Online</small>
+    </div>
   </div>
-</div>
 
-<div class="start">
-  <button onclick="startChat()">Start Chat</button>
-</div>
+  <!-- START CHAT -->
+  <div class="start">
+    <button onclick="startChat()">Start Chat</button>
+  </div>
 
-<div id="chatBox" class="chat">
-  <p>Chat will appear here.</p>
-</div>
+  <!-- CHAT AREA -->
+  <div id="chatBox" class="chat">
+    <p>Chat will appear here.</p>
+  </div>
 
-<div class="controls">
-  <input id="msgInput" placeholder="Type a message…" />
-  <button onclick="sendMessage()">Send</button>
-</div>
+  <!-- INPUT -->
+  <div class="controls">
+    <input id="msgInput" placeholder="Type a message…" />
+    <button onclick="sendMessage()">Send</button>
+  </div>
 
 <script>
-/* ---------- FIREBASE INIT ---------- */
+/********************************************************
+ * FIREBASE INIT
+ ********************************************************/
 firebase.initializeApp({
-  apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
+  apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",   // 🔴 CHANGE THIS ONLY
   authDomain: "connect-astro-e5309.firebaseapp.com",
   projectId: "connect-astro-e5309"
 });
 
-/* ---------- STATE ---------- */
-const CUSTOMER_ID = "cust_test_1";
+/********************************************************
+ * STATE
+ ********************************************************/
+const CUSTOMER_ID = "cust_test_1";     // later: dynamic
 const ASTROLOGER_ID = "Gautam";
-let sessionId = null;
 
-/* ---------- START CHAT ---------- */
+let sessionId = null;
+let chatStarted = false;
+
+/********************************************************
+ * START CHAT (CALLABLE FUNCTION)
+ ********************************************************/
 async function startChat() {
   try {
-    console.log("Starting chat…");
+    console.log("➡️ startChat clicked");
 
-    const functions = firebase.app().functions("asia-south1"); // ✅ FIX
+    const functions = firebase.app().functions("asia-south1");
     const chatNow = functions.httpsCallable("chatNow");
 
     const res = await chatNow({
@@ -110,28 +143,37 @@ async function startChat() {
       astrologerId: ASTROLOGER_ID
     });
 
-    console.log("SUCCESS:", res.data);
+    console.log("✅ chatNow response:", res.data);
 
-    sessionId = res.data.sessionId;
-    alert("Chat started successfully");
+    if (res.data && res.data.sessionId) {
+      sessionId = res.data.sessionId;
+      chatStarted = true;
+      alert("Chat started successfully");
+    } else {
+      alert(res.data.message || "Astrologer busy");
+    }
 
   } catch (err) {
-    console.error("ERROR:", err);
-    alert(err.message);
+    console.error("❌ chatNow error:", err);
+    alert(err.message || "Chat failed");
   }
 }
 
-/* ---------- SEND MESSAGE (UI ONLY) ---------- */
+/********************************************************
+ * SEND MESSAGE (UI ONLY FOR NOW)
+ ********************************************************/
 function sendMessage() {
-  if (!sessionId) {
-    alert("Start chat first");
+  if (!chatStarted) {
+    alert("Please start chat first");
     return;
   }
+
   const input = document.getElementById("msgInput");
   const text = input.value.trim();
   if (!text) return;
 
   input.value = "";
+
   const div = document.createElement("div");
   div.className = "msg";
   div.textContent = text;
@@ -141,6 +183,7 @@ function sendMessage() {
 
 </body>
 </html>
+
 
 
 
