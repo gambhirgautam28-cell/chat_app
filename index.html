@@ -1,186 +1,96 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Astro Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<title>Chat with Astrologer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Firebase COMPAT SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, Arial;
-      background: #f6f2ec;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .header {
-      background: #8b1d2c;
-      color: #fff;
-      padding: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: #fff;
-    }
-
-    .start {
-      padding: 12px;
-      background: #fff;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .chat {
-      flex: 1;
-      padding: 14px;
-      overflow-y: auto;
-    }
-
-    .msg {
-      background: #ffe6d5;
-      padding: 10px 12px;
-      border-radius: 12px;
-      margin-bottom: 8px;
-      max-width: 70%;
-      margin-left: auto;
-    }
-
-    .controls {
-      padding: 12px;
-      background: #fff;
-      border-top: 1px solid #ddd;
-      display: flex;
-      gap: 8px;
-    }
-
-    input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 20px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      padding: 10px 16px;
-      border-radius: 20px;
-      border: none;
-      background: #f8cfa7;
-      font-weight: 700;
-      cursor: pointer;
-    }
-  </style>
+<style>
+body{margin:0;font-family:system-ui;background:#f6f2ec;height:100vh;display:flex;flex-direction:column}
+.header{background:#8b1d2c;color:#fff;padding:14px;display:flex;gap:10px;align-items:center}
+.avatar{width:36px;height:36px;border-radius:50%;background:#fff}
+.chat{flex:1;padding:14px;overflow-y:auto}
+.msg{background:#ffe6d5;padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:70%;margin-left:auto}
+.controls{display:flex;gap:8px;padding:12px;background:#fff}
+input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
+button{padding:10px 16px;border-radius:20px;border:none;background:#f8cfa7;font-weight:700}
+</style>
 </head>
 
 <body>
 
-  <!-- HEADER -->
-  <div class="header">
-    <div class="avatar"></div>
-    <div>
-      <strong>Astrologer Gautam</strong><br />
-      <small>Online</small>
-    </div>
+<div class="header">
+  <div class="avatar"></div>
+  <div>
+    <strong>Astrologer Gautam</strong><br>
+    <small>Online</small>
   </div>
+</div>
 
-  <!-- START CHAT -->
-  <div class="start">
-    <button onclick="startChat()">Start Chat</button>
-  </div>
+<div id="chat" class="chat"></div>
 
-  <!-- CHAT AREA -->
-  <div id="chatBox" class="chat">
-    <p>Chat will appear here.</p>
-  </div>
-
-  <!-- INPUT -->
-  <div class="controls">
-    <input id="msgInput" placeholder="Type a message…" />
-    <button onclick="sendMessage()">Send</button>
-  </div>
+<div class="controls">
+  <input id="msg" placeholder="Type message…" />
+  <button onclick="send()">Send</button>
+</div>
 
 <script>
-/********************************************************
- * FIREBASE INIT
- ********************************************************/
+/* 🔴 PUT YOUR FIREBASE CONFIG HERE */
 firebase.initializeApp({
-  apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",   // 🔴 CHANGE THIS ONLY
+  apiKey:  "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
   authDomain: "connect-astro-e5309.firebaseapp.com",
   projectId: "connect-astro-e5309"
 });
 
-/********************************************************
- * STATE
- ********************************************************/
-const CUSTOMER_ID = "cust_test_1";     // later: dynamic
-const ASTROLOGER_ID = "Gautam";
+const db = firebase.firestore();
 
-let sessionId = null;
-let chatStarted = false;
+// Unique IDs
+const customerId = "cust_" + Math.random().toString(36).slice(2,8);
+const sessionId = "sess_" + Date.now();
 
-/********************************************************
- * START CHAT (CALLABLE FUNCTION)
- ********************************************************/
-async function startChat() {
-  try {
-    console.log("➡️ startChat clicked");
+// Create session
+db.collection("sessions").doc(sessionId).set({
+  astrologerId: "Gautam",
+  customerId,
+  status: "active",
+  createdAt: firebase.firestore.FieldValue.serverTimestamp()
+});
 
-    const functions = firebase.app().functions("asia-south1");
-    const chatNow = functions.httpsCallable("chatNow");
-
-    const res = await chatNow({
-      customerId: CUSTOMER_ID,
-      astrologerId: ASTROLOGER_ID
+// Listen messages
+db.collection("sessions").doc(sessionId)
+  .collection("messages")
+  .orderBy("createdAt")
+  .onSnapshot(snap=>{
+    const chat=document.getElementById("chat");
+    chat.innerHTML="";
+    snap.forEach(d=>{
+      const m=d.data();
+      const div=document.createElement("div");
+      div.className="msg";
+      div.textContent=m.text;
+      chat.appendChild(div);
     });
+    chat.scrollTop=chat.scrollHeight;
+  });
 
-    console.log("✅ chatNow response:", res.data);
-
-    if (res.data && res.data.sessionId) {
-      sessionId = res.data.sessionId;
-      chatStarted = true;
-      alert("Chat started successfully");
-    } else {
-      alert(res.data.message || "Astrologer busy");
-    }
-
-  } catch (err) {
-    console.error("❌ chatNow error:", err);
-    alert(err.message || "Chat failed");
-  }
-}
-
-/********************************************************
- * SEND MESSAGE (UI ONLY FOR NOW)
- ********************************************************/
-function sendMessage() {
-  if (!chatStarted) {
-    alert("Please start chat first");
-    return;
-  }
-
-  const input = document.getElementById("msgInput");
-  const text = input.value.trim();
-  if (!text) return;
-
-  input.value = "";
-
-  const div = document.createElement("div");
-  div.className = "msg";
-  div.textContent = text;
-  document.getElementById("chatBox").appendChild(div);
+// Send message
+function send(){
+  const input=document.getElementById("msg");
+  const text=input.value.trim();
+  if(!text)return;
+  input.value="";
+  db.collection("sessions").doc(sessionId)
+    .collection("messages").add({
+      sender:"customer",
+      text,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
 }
 </script>
-
 </body>
 </html>
 
