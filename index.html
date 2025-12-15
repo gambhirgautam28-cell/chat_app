@@ -5,16 +5,16 @@
 <title>Chat with Astrologer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
 body{margin:0;font-family:system-ui;background:#f6f2ec;height:100vh;display:flex;flex-direction:column}
 .header{background:#8b1d2c;color:#fff;padding:14px;display:flex;gap:10px;align-items:center}
 .avatar{width:36px;height:36px;border-radius:50%;background:#fff}
 .chat{flex:1;padding:14px;overflow-y:auto}
-.msg{background:#ffe6d5;padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:70%;margin-left:auto}
+.msg{padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:70%}
+.me{background:#ffe6d5;margin-left:auto}
+.them{background:#fff;margin-right:auto}
 .controls{display:flex;gap:8px;padding:12px;background:#fff}
 input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
 button{padding:10px 16px;border-radius:20px;border:none;background:#f8cfa7;font-weight:700}
@@ -39,60 +39,58 @@ button{padding:10px 16px;border-radius:20px;border:none;background:#f8cfa7;font-
 </div>
 
 <script>
-/* 🔴 PUT YOUR FIREBASE CONFIG HERE */
-firebase.initializeApp({
-  apiKey:  "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
-  authDomain: "connect-astro-e5309.firebaseapp.com",
-  projectId: "connect-astro-e5309"
+/* -------- CUSTOMER ID -------- */
+const customerName = "Customer_" + Math.floor(Math.random()*10000);
+
+/* -------- PUBNUB INIT -------- */
+const pubnub = new PubNub({
+  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
+  subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
+  uuid: customerName
 });
 
-const db = firebase.firestore();
+const CHANNEL = "astro_gautam_chat";
 
-// Unique IDs
-const customerId = "cust_" + Math.random().toString(36).slice(2,8);
-const sessionId = "sess_" + Date.now();
+/* -------- LISTEN -------- */
+pubnub.subscribe({ channels: [CHANNEL] });
 
-// Create session
-db.collection("sessions").doc(sessionId).set({
-  astrologerId: "Gautam",
-  customerId,
-  status: "active",
-  createdAt: firebase.firestore.FieldValue.serverTimestamp()
+pubnub.addListener({
+  message: e => {
+    const m = e.message;
+    if(m.sender === customerName) return;
+    addMsg(m.text, "them");
+  }
 });
 
-// Listen messages
-db.collection("sessions").doc(sessionId)
-  .collection("messages")
-  .orderBy("createdAt")
-  .onSnapshot(snap=>{
-    const chat=document.getElementById("chat");
-    chat.innerHTML="";
-    snap.forEach(d=>{
-      const m=d.data();
-      const div=document.createElement("div");
-      div.className="msg";
-      div.textContent=m.text;
-      chat.appendChild(div);
-    });
-    chat.scrollTop=chat.scrollHeight;
-  });
-
-// Send message
+/* -------- SEND -------- */
 function send(){
-  const input=document.getElementById("msg");
-  const text=input.value.trim();
-  if(!text)return;
+  const input = document.getElementById("msg");
+  const text = input.value.trim();
+  if(!text) return;
   input.value="";
-  db.collection("sessions").doc(sessionId)
-    .collection("messages").add({
-      sender:"customer",
-      text,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
+  addMsg(text,"me");
+
+  pubnub.publish({
+    channel: CHANNEL,
+    message:{
+      sender: customerName,
+      text
+    }
+  });
+}
+
+/* -------- UI -------- */
+function addMsg(text,type){
+  const d=document.createElement("div");
+  d.className="msg "+type;
+  d.textContent=text;
+  chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;
 }
 </script>
 </body>
 </html>
+
 
 
 
