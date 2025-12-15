@@ -5,6 +5,10 @@
   <title>Astro Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Firebase COMPAT SDKs (SAFE) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -17,7 +21,7 @@
 
     .header {
       background: #8b1d2c;
-      color: white;
+      color: #fff;
       padding: 14px;
       display: flex;
       align-items: center;
@@ -31,11 +35,16 @@
       background: #fff;
     }
 
+    .start {
+      padding: 12px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
     .chat {
       flex: 1;
       padding: 14px;
       overflow-y: auto;
-      background: #f6f2ec;
     }
 
     .msg {
@@ -70,12 +79,6 @@
       font-weight: 700;
       cursor: pointer;
     }
-
-    .start {
-      padding: 12px;
-      background: #fff;
-      border-bottom: 1px solid #ddd;
-    }
   </style>
 </head>
 
@@ -85,7 +88,7 @@
   <div class="header">
     <div class="avatar"></div>
     <div>
-      <strong>Astrologer Gautam</strong><br />
+      <strong>Astrologer Gautam</strong><br>
       <small>Online</small>
     </div>
   </div>
@@ -95,7 +98,7 @@
     <button onclick="startChat()">Start Chat</button>
   </div>
 
-  <!-- CHAT -->
+  <!-- CHAT AREA -->
   <div id="chatBox" class="chat">
     <p>Chat will appear here.</p>
   </div>
@@ -107,14 +110,57 @@
   </div>
 
 <script>
-  // BASE STATE (NO FIREBASE YET)
-  let chatStarted = false;
+  /************************************************
+   * FIREBASE INIT
+   ************************************************/
+  firebase.initializeApp({
+    apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
+    authDomain: "connect-astro-e5309.firebaseapp.com",
+    projectId: "connect-astro-e5309"
+  });
 
-  function startChat() {
-    chatStarted = true;
-    alert("Chat started (UI only)");
+  /************************************************
+   * STATE
+   ************************************************/
+  let chatStarted = false;
+  let sessionId = null;
+
+  const CUSTOMER_ID = "cust_test_1";
+  const ASTROLOGER_ID = "Gautam";
+
+  /************************************************
+   * START CHAT (CALLS chatNow)
+   ************************************************/
+  async function startChat() {
+    try {
+      console.log("Calling chatNow…");
+
+      const functions = firebase.functions("asia-south1");
+      const chatNow = functions.httpsCallable("chatNow");
+
+      const res = await chatNow({
+        customerId: CUSTOMER_ID,
+        astrologerId: ASTROLOGER_ID
+      });
+
+      console.log("chatNow response:", res.data);
+
+      if (res.data.sessionId) {
+        sessionId = res.data.sessionId;
+        chatStarted = true;
+        alert("Chat started successfully");
+      } else {
+        alert(res.data.message || "Astrologer busy");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error starting chat");
+    }
   }
 
+  /************************************************
+   * SEND MESSAGE (UI ONLY FOR NOW)
+   ************************************************/
   function sendMessage() {
     if (!chatStarted) {
       alert("Please start chat first");
@@ -136,6 +182,7 @@
 
 </body>
 </html>
+
 
 
 
