@@ -36,16 +36,16 @@ button{padding:12px;border-radius:20px;border:none;background:#F8CFAF;font-weigh
 
 <!-- CUSTOMER DETAILS FORM -->
 <div id="formBox" class="formBox">
-  <input id="name" placeholder="Full Name" />
-  <select id="gender">
+  <input id="custName" placeholder="Full Name" />
+  <select id="custGender">
     <option value="">Gender</option>
     <option>Male</option>
     <option>Female</option>
     <option>Other</option>
   </select>
-  <input id="dob" type="date" />
-  <input id="birthTime" type="time" />
-  <input id="birthPlace" placeholder="Birth Place" />
+  <input id="custDob" type="date" />
+  <input id="custBirthTime" type="time" />
+  <input id="custBirthPlace" placeholder="Birth Place" />
   <button onclick="startChat()">Start Chat with Astrologer</button>
 </div>
 
@@ -82,13 +82,13 @@ pubnub.addListener({
 
 /* ---------------- START CHAT ---------------- */
 function startChat(){
-  const name=name.value.trim();
-  const gender=gender.value;
-  const dob=dob.value;
-  const bt=birthTime.value;
-  const bp=birthPlace.value.trim();
+  const nameVal = document.getElementById("custName").value.trim();
+  const genderVal = document.getElementById("custGender").value;
+  const dobVal = document.getElementById("custDob").value;
+  const timeVal = document.getElementById("custBirthTime").value;
+  const placeVal = document.getElementById("custBirthPlace").value.trim();
 
-  if(!name||!gender||!dob||!bt||!bp){
+  if(!nameVal || !genderVal || !dobVal || !timeVal || !placeVal){
     alert("Please fill all details");
     return;
   }
@@ -96,13 +96,13 @@ function startChat(){
   chatStarted=true;
   document.getElementById("formBox").style.display="none";
 
-  const details=
+  const details =
 `🧑 Customer Details
-Name: ${name}
-Gender: ${gender}
-DOB: ${dob}
-Birth Time: ${bt}
-Birth Place: ${bp}`;
+Name: ${nameVal}
+Gender: ${genderVal}
+DOB: ${dobVal}
+Birth Time: ${timeVal}
+Birth Place: ${placeVal}`;
 
   systemMsg(details);
   systemMsg("Chat started. You have 5 minutes.");
@@ -160,12 +160,13 @@ function addMsg(text,type){
 function updateTimer(){
   const m=Math.floor(remaining/60);
   const s=remaining%60;
-  timer.textContent=`${m}:${s.toString().padStart(2,"0")}`;
+  document.getElementById("timer").textContent=`${m}:${s.toString().padStart(2,"0")}`;
 }
 </script>
 
 </body>
 </html>
+
 
 
 
