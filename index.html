@@ -9,7 +9,7 @@
 
 <style>
 body{margin:0;font-family:system-ui;background:#f6f2ec;height:100vh;display:flex;flex-direction:column}
-.header{background:#8b1d2c;color:#fff;padding:14px;display:flex;gap:10px;align-items:center}
+.header{background:#F8CFAF;padding:14px;display:flex;gap:10px;align-items:center}
 .avatar{width:36px;height:36px;border-radius:50%;background:#fff}
 .chat{flex:1;padding:14px;overflow-y:auto}
 .msg{padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:70%}
@@ -17,7 +17,9 @@ body{margin:0;font-family:system-ui;background:#f6f2ec;height:100vh;display:flex
 .them{background:#fff;margin-right:auto}
 .controls{display:flex;gap:8px;padding:12px;background:#fff}
 input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
-button{padding:10px 16px;border-radius:20px;border:none;background:#f8cfa7;font-weight:700}
+button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700}
+.startBox{padding:14px;background:#fff;text-align:center}
+.timer{font-weight:700}
 </style>
 </head>
 
@@ -27,11 +29,15 @@ button{padding:10px 16px;border-radius:20px;border:none;background:#f8cfa7;font-
   <div class="avatar"></div>
   <div>
     <strong>Astrologer Gautam</strong><br>
-    <small>Online</small>
+    <span id="timer" class="timer">Not started</span>
   </div>
 </div>
 
-<div id="chat" class="chat"></div>
+<div class="chat" id="chat"></div>
+
+<div class="startBox" id="startBox">
+  <button onclick="startChat()">Start Chat (5 minutes)</button>
+</div>
 
 <div class="controls">
   <input id="msg" placeholder="Type message…" />
@@ -39,47 +45,85 @@ button{padding:10px 16px;border-radius:20px;border:none;background:#f8cfa7;font-
 </div>
 
 <script>
-/* -------- CUSTOMER ID -------- */
+/* ---------------- CONFIG ---------------- */
+const CHANNEL = "astro_gautam_chat";
 const customerName = "Customer_" + Math.floor(Math.random()*10000);
 
-/* -------- PUBNUB INIT -------- */
+/* ---------------- PUBNUB ---------------- */
 const pubnub = new PubNub({
   publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
   subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
   uuid: customerName
 });
 
-const CHANNEL = "astro_gautam_chat";
-
-/* -------- LISTEN -------- */
 pubnub.subscribe({ channels: [CHANNEL] });
 
+/* ---------------- STATE ---------------- */
+let chatStarted = false;
+let remaining = 300;
+let timerInterval = null;
+
+/* ---------------- LISTEN ---------------- */
 pubnub.addListener({
   message: e => {
     const m = e.message;
     if(m.sender === customerName) return;
-    addMsg(m.text, "them");
+    addMsg(m.text,"them");
   }
 });
 
-/* -------- SEND -------- */
+/* ---------------- START CHAT ---------------- */
+function startChat(){
+  if(chatStarted) return;
+  chatStarted = true;
+  document.getElementById("startBox").style.display="none";
+  addMsg("Chat started. You have 5 minutes.","them");
+
+  updateTimer();
+  timerInterval = setInterval(()=>{
+    remaining--;
+    updateTimer();
+
+    if(remaining===60){
+      systemMsg("⚠️ 1 minute remaining");
+    }
+    if(remaining===30){
+      systemMsg("⚠️ 30 seconds remaining");
+    }
+    if(remaining<=0){
+      clearInterval(timerInterval);
+      systemMsg("⛔ Chat ended");
+      chatStarted=false;
+    }
+  },1000);
+}
+
+/* ---------------- SEND ---------------- */
 function send(){
-  const input = document.getElementById("msg");
-  const text = input.value.trim();
+  if(!chatStarted){
+    alert("Click Start Chat first");
+    return;
+  }
+  const input=document.getElementById("msg");
+  const text=input.value.trim();
   if(!text) return;
   input.value="";
   addMsg(text,"me");
 
   pubnub.publish({
-    channel: CHANNEL,
-    message:{
-      sender: customerName,
-      text
-    }
+    channel:CHANNEL,
+    message:{sender:customerName,text}
   });
 }
 
-/* -------- UI -------- */
+/* ---------------- HELPERS ---------------- */
+function systemMsg(text){
+  pubnub.publish({
+    channel:CHANNEL,
+    message:{sender:"SYSTEM",text}
+  });
+}
+
 function addMsg(text,type){
   const d=document.createElement("div");
   d.className="msg "+type;
@@ -87,7 +131,14 @@ function addMsg(text,type){
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
+
+function updateTimer(){
+  const m=Math.floor(remaining/60);
+  const s=remaining%60;
+  document.getElementById("timer").textContent=`${m}:${s.toString().padStart(2,"0")}`;
+}
 </script>
+
 </body>
 </html>
 
