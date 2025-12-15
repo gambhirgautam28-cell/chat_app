@@ -5,7 +5,7 @@
   <title>Astro Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Firebase COMPAT SDKs (SAFE) -->
+  <!-- Firebase COMPAT SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
@@ -98,7 +98,7 @@
     <button onclick="startChat()">Start Chat</button>
   </div>
 
-  <!-- CHAT AREA -->
+  <!-- CHAT -->
   <div id="chatBox" class="chat">
     <p>Chat will appear here.</p>
   </div>
@@ -110,74 +110,84 @@
   </div>
 
 <script>
-  /************************************************
-   * FIREBASE INIT
-   ************************************************/
-  firebase.initializeApp({
-    apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
-    authDomain: "connect-astro-e5309.firebaseapp.com",
-    projectId: "connect-astro-e5309"
-  });
+/********************************************************
+ * FIREBASE INIT
+ ********************************************************/
+firebase.initializeApp({
+  apiKey:"AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
+  authDomain: "connect-astro-e5309.firebaseapp.com",
+  projectId: "connect-astro-e5309"
+});
 
-  /************************************************
-   * STATE
-   ************************************************/
-  let chatStarted = false;
-  let sessionId = null;
+/********************************************************
+ * STATE
+ ********************************************************/
+const CUSTOMER_ID = "cust_test_1";
+const ASTROLOGER_ID = "Gautam";
 
-  const CUSTOMER_ID = "cust_test_1";
-  const ASTROLOGER_ID = "Gautam";
+let sessionId = null;
+let chatStarted = false;
 
-  /************************************************
-   * START CHAT (CALLS chatNow)
-   ************************************************/
-  async function startChat() {
-    try {
-      console.log("Calling chatNow…");
+/********************************************************
+ * START CHAT — FULL DEBUG
+ ********************************************************/
+async function startChat() {
+  try {
+    console.log("▶️ startChat clicked");
 
-      const functions = firebase.functions("asia-south1");
-      const chatNow = functions.httpsCallable("chatNow");
+    const functions = firebase.functions("asia-south1");
+    console.log("▶️ functions instance:", functions);
 
-      const res = await chatNow({
-        customerId: CUSTOMER_ID,
-        astrologerId: ASTROLOGER_ID
-      });
+    const chatNow = functions.httpsCallable("chatNow");
+    console.log("▶️ callable chatNow created");
 
-      console.log("chatNow response:", res.data);
+    const response = await chatNow({
+      customerId: CUSTOMER_ID,
+      astrologerId: ASTROLOGER_ID
+    });
 
-      if (res.data.sessionId) {
-        sessionId = res.data.sessionId;
-        chatStarted = true;
-        alert("Chat started successfully");
-      } else {
-        alert(res.data.message || "Astrologer busy");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Error starting chat");
-    }
-  }
+    console.log("✅ FULL RESPONSE:", response);
 
-  /************************************************
-   * SEND MESSAGE (UI ONLY FOR NOW)
-   ************************************************/
-  function sendMessage() {
-    if (!chatStarted) {
-      alert("Please start chat first");
-      return;
+    if (response.data && response.data.sessionId) {
+      sessionId = response.data.sessionId;
+      chatStarted = true;
+      alert("Chat started successfully");
+    } else {
+      alert("chatNow returned no sessionId");
     }
 
-    const input = document.getElementById("msgInput");
-    const text = input.value.trim();
-    if (!text) return;
+  } catch (err) {
+    console.error("❌ FULL ERROR OBJECT:", err);
 
-    input.value = "";
-
-    const div = document.createElement("div");
-    div.className = "msg";
-    div.textContent = text;
-    document.getElementById("chatBox").appendChild(div);
+    alert(
+      "CHAT FAILED:\n" +
+      (err.message || "") +
+      "\n\nDETAILS:\n" +
+      (JSON.stringify(err, null, 2))
+    );
   }
+}
+
+/********************************************************
+ * SEND MESSAGE (UI ONLY)
+ ********************************************************/
+function sendMessage() {
+  if (!chatStarted) {
+    alert("Please start chat first");
+    return;
+  }
+
+  const input = document.getElementById("msgInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = "";
+
+  const div = document.createElement("div");
+  div.className = "msg";
+  div.textContent = text;
+  document.getElementById("chatBox").appendChild(div);
+}
 </script>
 
 </body>
