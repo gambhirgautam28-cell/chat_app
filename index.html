@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Chat with Astrologer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
@@ -12,13 +11,13 @@ body{margin:0;font-family:system-ui;background:#f6f2ec;height:100vh;display:flex
 .header{background:#F8CFAF;padding:14px;display:flex;gap:10px;align-items:center}
 .avatar{width:36px;height:36px;border-radius:50%;background:#fff}
 .chat{flex:1;padding:14px;overflow-y:auto}
-.msg{padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:70%}
+.msg{padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:80%}
 .me{background:#ffe6d5;margin-left:auto}
 .them{background:#fff;margin-right:auto}
 .controls{display:flex;gap:8px;padding:12px;background:#fff}
-input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
-button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700}
-.startBox{padding:14px;background:#fff;text-align:center}
+input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;margin-bottom:8px}
+button{padding:12px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700;width:100%}
+.formBox{padding:16px;background:#fff}
 .timer{font-weight:700}
 </style>
 </head>
@@ -33,10 +32,21 @@ button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-
   </div>
 </div>
 
-<div class="chat" id="chat"></div>
+<div id="chat" class="chat"></div>
 
-<div class="startBox" id="startBox">
-  <button onclick="startChat()">Start Chat (5 minutes)</button>
+<!-- CUSTOMER DETAILS FORM -->
+<div id="formBox" class="formBox">
+  <input id="name" placeholder="Full Name" />
+  <select id="gender">
+    <option value="">Gender</option>
+    <option>Male</option>
+    <option>Female</option>
+    <option>Other</option>
+  </select>
+  <input id="dob" type="date" />
+  <input id="birthTime" type="time" />
+  <input id="birthPlace" placeholder="Birth Place" />
+  <button onclick="startChat()">Start Chat with Astrologer</button>
 </div>
 
 <div class="controls">
@@ -47,49 +57,64 @@ button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-
 <script>
 /* ---------------- CONFIG ---------------- */
 const CHANNEL = "astro_gautam_chat";
-const customerName = "Customer_" + Math.floor(Math.random()*10000);
-
-/* ---------------- PUBNUB ---------------- */
-const pubnub = new PubNub({
-  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
-  subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
-  uuid: customerName
-});
-
-pubnub.subscribe({ channels: [CHANNEL] });
 
 /* ---------------- STATE ---------------- */
-let chatStarted = false;
-let remaining = 300;
-let timerInterval = null;
+let chatStarted=false;
+let remaining=300;
+let timerInterval=null;
 
-/* ---------------- LISTEN ---------------- */
+/* ---------------- PUBNUB ---------------- */
+const pubnub=new PubNub({
+  publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
+  subscribeKey:"sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
+  uuid:"customer_"+Math.random().toString(36).slice(2,7)
+});
+
+pubnub.subscribe({channels:[CHANNEL]});
+
 pubnub.addListener({
-  message: e => {
-    const m = e.message;
-    if(m.sender === customerName) return;
+  message:e=>{
+    const m=e.message;
+    if(m.sender===pubnub.getUUID())return;
     addMsg(m.text,"them");
   }
 });
 
 /* ---------------- START CHAT ---------------- */
 function startChat(){
-  if(chatStarted) return;
-  chatStarted = true;
-  document.getElementById("startBox").style.display="none";
-  addMsg("Chat started. You have 5 minutes.","them");
+  const name=name.value.trim();
+  const gender=gender.value;
+  const dob=dob.value;
+  const bt=birthTime.value;
+  const bp=birthPlace.value.trim();
+
+  if(!name||!gender||!dob||!bt||!bp){
+    alert("Please fill all details");
+    return;
+  }
+
+  chatStarted=true;
+  document.getElementById("formBox").style.display="none";
+
+  const details=
+`🧑 Customer Details
+Name: ${name}
+Gender: ${gender}
+DOB: ${dob}
+Birth Time: ${bt}
+Birth Place: ${bp}`;
+
+  systemMsg(details);
+  systemMsg("Chat started. You have 5 minutes.");
 
   updateTimer();
-  timerInterval = setInterval(()=>{
+  timerInterval=setInterval(()=>{
     remaining--;
     updateTimer();
 
-    if(remaining===60){
-      systemMsg("⚠️ 1 minute remaining");
-    }
-    if(remaining===30){
-      systemMsg("⚠️ 30 seconds remaining");
-    }
+    if(remaining===60) systemMsg("⚠️ 1 minute remaining");
+    if(remaining===30) systemMsg("⚠️ 30 seconds remaining");
+
     if(remaining<=0){
       clearInterval(timerInterval);
       systemMsg("⛔ Chat ended");
@@ -101,18 +126,18 @@ function startChat(){
 /* ---------------- SEND ---------------- */
 function send(){
   if(!chatStarted){
-    alert("Click Start Chat first");
+    alert("Please start chat first");
     return;
   }
   const input=document.getElementById("msg");
   const text=input.value.trim();
-  if(!text) return;
+  if(!text)return;
   input.value="";
   addMsg(text,"me");
 
   pubnub.publish({
     channel:CHANNEL,
-    message:{sender:customerName,text}
+    message:{sender:pubnub.getUUID(),text}
   });
 }
 
@@ -135,12 +160,13 @@ function addMsg(text,type){
 function updateTimer(){
   const m=Math.floor(remaining/60);
   const s=remaining%60;
-  document.getElementById("timer").textContent=`${m}:${s.toString().padStart(2,"0")}`;
+  timer.textContent=`${m}:${s.toString().padStart(2,"0")}`;
 }
 </script>
 
 </body>
 </html>
+
 
 
 
