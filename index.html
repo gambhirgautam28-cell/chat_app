@@ -4,50 +4,31 @@
 <meta charset="UTF-8">
 <title>Chat with Astrologer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
 <style>
 body{margin:0;font-family:system-ui;background:#f6f2ec;height:100vh;display:flex;flex-direction:column}
-.header{background:#F8CFAF;padding:14px;display:flex;gap:10px;align-items:center}
-.avatar{width:36px;height:36px;border-radius:50%;background:#fff}
-.chat{flex:1;padding:14px;overflow-y:auto}
-.msg{padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:80%}
-.me{background:#ffe6d5;margin-left:auto}
-.them{background:#fff;margin-right:auto}
-.controls{display:flex;gap:8px;padding:12px;background:#fff}
-input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;margin-bottom:8px}
-button{padding:12px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700;width:100%}
-.formBox{padding:16px;background:#fff}
-.timer{font-weight:700}
+.header{background:#F8CFAF;padding:14px;display:flex;justify-content:space-between}
+.chat{flex:1;padding:12px;overflow:auto}
+.msg{padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:75%}
+.me{background:#ffe0cc;margin-left:auto}
+.them{background:#fff}
+.controls{display:flex;gap:8px;padding:10px}
+input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
+button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <div class="avatar"></div>
-  <div>
-    <strong>Astrologer Gautam</strong><br>
-    <span id="timer" class="timer">Not started</span>
-  </div>
+  <strong>Astrologer Gautam</strong>
+  ⏱️ <span id="timer">--:--</span>
 </div>
 
 <div id="chat" class="chat"></div>
-
-<!-- CUSTOMER DETAILS FORM -->
-<div id="formBox" class="formBox">
-  <input id="custName" placeholder="Full Name" />
-  <select id="custGender">
-    <option value="">Gender</option>
-    <option>Male</option>
-    <option>Female</option>
-    <option>Other</option>
-  </select>
-  <input id="custDob" type="date" />
-  <input id="custBirthTime" type="time" />
-  <input id="custBirthPlace" placeholder="Birth Place" />
-  <button onclick="startChat()">Start Chat with Astrologer</button>
-</div>
 
 <div class="controls">
   <input id="msg" placeholder="Type message…" />
@@ -55,118 +36,56 @@ button{padding:12px;border-radius:20px;border:none;background:#F8CFAF;font-weigh
 </div>
 
 <script>
-/* ---------------- CONFIG ---------------- */
-const CHANNEL = "astro_gautam_chat";
+const firebaseConfig = {
+  apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
+  authDomain: "connect-astro-e5309.firebaseapp.com",
+  projectId: "connect-astro-e5309"
+};
 
-/* ---------------- STATE ---------------- */
-let chatStarted=false;
-let remaining=300;
-let timerInterval=null;
+firebase.initializeApp(firebaseConfig);
+const functions = firebase.functions();
 
-/* ---------------- PUBNUB ---------------- */
-const pubnub=new PubNub({
-  publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
-  subscribeKey:"sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
-  uuid:"customer_"+Math.random().toString(36).slice(2,7)
-});
+const customerId = "cust_demo";
+const astrologerId = "Gautam";
+let sessionId = null;
 
-pubnub.subscribe({channels:[CHANNEL]});
-
-pubnub.addListener({
-  message:e=>{
-    const m=e.message;
-    if(m.sender===pubnub.getUUID())return;
-    addMsg(m.text,"them");
-  }
-});
-
-/* ---------------- START CHAT ---------------- */
-function startChat(){
-  const nameVal = document.getElementById("custName").value.trim();
-  const genderVal = document.getElementById("custGender").value;
-  const dobVal = document.getElementById("custDob").value;
-  const timeVal = document.getElementById("custBirthTime").value;
-  const placeVal = document.getElementById("custBirthPlace").value.trim();
-
-  if(!nameVal || !genderVal || !dobVal || !timeVal || !placeVal){
-    alert("Please fill all details");
-    return;
-  }
-
-  chatStarted=true;
-  document.getElementById("formBox").style.display="none";
-
-  const details =
-`🧑 Customer Details
-Name: ${nameVal}
-Gender: ${genderVal}
-DOB: ${dobVal}
-Birth Time: ${timeVal}
-Birth Place: ${placeVal}`;
-
-  systemMsg(details);
-  systemMsg("Chat started. You have 5 minutes.");
-
-  updateTimer();
-  timerInterval=setInterval(()=>{
-    remaining--;
-    updateTimer();
-
-    if(remaining===60) systemMsg("⚠️ 1 minute remaining");
-    if(remaining===30) systemMsg("⚠️ 30 seconds remaining");
-
-    if(remaining<=0){
-      clearInterval(timerInterval);
-      systemMsg("⛔ Chat ended");
-      chatStarted=false;
-    }
-  },1000);
+// START CHAT
+async function startChat() {
+  const res = await functions.httpsCallable("chatNow")({
+    customerId,
+    astrologerId
+  });
+  sessionId = res.data.sessionId;
 }
 
-/* ---------------- SEND ---------------- */
-function send(){
-  if(!chatStarted){
-    alert("Please start chat first");
-    return;
-  }
-  const input=document.getElementById("msg");
-  const text=input.value.trim();
-  if(!text)return;
-  input.value="";
-  addMsg(text,"me");
+// SEND MESSAGE
+async function send() {
+  const text = msg.value.trim();
+  if (!text || !sessionId) return;
+  msg.value = "";
+  add(text, "me");
 
-  pubnub.publish({
-    channel:CHANNEL,
-    message:{sender:pubnub.getUUID(),text}
+  await functions.httpsCallable("sendMessage")({
+    sessionId,
+    senderId: customerId,
+    text
   });
 }
 
-/* ---------------- HELPERS ---------------- */
-function systemMsg(text){
-  pubnub.publish({
-    channel:CHANNEL,
-    message:{sender:"SYSTEM",text}
-  });
-}
-
-function addMsg(text,type){
+function add(text, cls){
   const d=document.createElement("div");
-  d.className="msg "+type;
+  d.className="msg "+cls;
   d.textContent=text;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
 
-function updateTimer(){
-  const m=Math.floor(remaining/60);
-  const s=remaining%60;
-  document.getElementById("timer").textContent=`${m}:${s.toString().padStart(2,"0")}`;
-}
+// AUTO START (for testing)
+startChat();
 </script>
 
 </body>
 </html>
-
 
 
 
