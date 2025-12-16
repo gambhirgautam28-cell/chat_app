@@ -8,32 +8,97 @@
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
-body{margin:0;font-family:system-ui;background:#f4f4f4;height:100vh;display:flex;flex-direction:column}
-.header{background:#F8CFAF;padding:14px;font-weight:700}
-.chat{flex:1;padding:12px;overflow:auto}
-.msg{max-width:75%;padding:10px;border-radius:12px;margin-bottom:8px}
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#f4f4f4;
+  height:100vh;
+  display:flex;
+  flex-direction:column
+}
+.header{
+  background:#F8CFAF;
+  padding:14px;
+  font-weight:700;
+  display:flex;
+  justify-content:space-between
+}
+.chat{
+  flex:1;
+  padding:12px;
+  overflow:auto
+}
+.msg{
+  max-width:75%;
+  padding:10px;
+  border-radius:12px;
+  margin-bottom:8px
+}
 .me{background:#ffe0cc;margin-left:auto}
 .them{background:#fff}
-.controls{display:flex;padding:10px;gap:8px;background:#fff}
-input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
-button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700}
+.controls{
+  display:flex;
+  padding:10px;
+  gap:8px;
+  background:#fff
+}
+input{
+  flex:1;
+  padding:10px;
+  border-radius:20px;
+  border:1px solid #ccc
+}
+button{
+  padding:10px 16px;
+  border-radius:20px;
+  border:none;
+  background:#F8CFAF;
+  font-weight:700
+}
+#detailsBox{
+  padding:14px;
+  background:#fff
+}
+#detailsBox input{
+  width:100%;
+  padding:10px;
+  margin-bottom:8px;
+  border-radius:8px;
+  border:1px solid #ccc
+}
 </style>
 </head>
 
 <body>
 
-<div class="header">Chat with Astrologer Gautam</div>
+<!-- HEADER -->
+<div class="header">
+  <span>Chat with Astrologer Gautam</span>
+  ⏱️ <span id="timer">05:00</span>
+</div>
 
+<!-- CUSTOMER DETAILS -->
+<div id="detailsBox">
+  <input id="cname" placeholder="Full Name">
+  <input id="cdob" type="date">
+  <input id="cbirth" placeholder="Birth Place">
+  <button onclick="startChat()">Start Chat</button>
+</div>
+
+<!-- CHAT -->
 <div id="chat" class="chat"></div>
 
+<!-- INPUT -->
 <div class="controls">
-  <input id="msg" placeholder="Type message…" />
+  <input id="msg" placeholder="Type message…">
   <button onclick="send()">Send</button>
 </div>
 
 <script>
+/* ---------------- CONFIG ---------------- */
 const CHANNEL = "astro_gautam_chat";
 
+/* ---------------- PUBNUB ---------------- */
 const pubnub = new PubNub({
   publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
   subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
@@ -49,10 +114,67 @@ pubnub.addListener({
   }
 });
 
+/* ---------------- STATE ---------------- */
+let chatStarted = false;
+let timeLeft = 300;
+let timerInterval = null;
+
+/* ---------------- START CHAT ---------------- */
+function startChat(){
+  const name = cname.value.trim();
+  const dob = cdob.value;
+  const place = cbirth.value.trim();
+
+  if(!name || !dob || !place){
+    alert("Please fill all details");
+    return;
+  }
+
+  document.getElementById("detailsBox").style.display = "none";
+  chatStarted = true;
+
+  systemMsg(
+    "🧑 Customer Details\n" +
+    "Name: " + name + "\n" +
+    "DOB: " + dob + "\n" +
+    "Birth Place: " + place
+  );
+
+  startTimer();
+}
+
+/* ---------------- TIMER ---------------- */
+function startTimer(){
+  timerInterval = setInterval(() => {
+    timeLeft--;
+
+    const m = String(Math.floor(timeLeft/60)).padStart(2,'0');
+    const s = String(timeLeft%60).padStart(2,'0');
+    timer.textContent = m + ":" + s;
+
+    if(timeLeft === 60){
+      systemMsg("⚠️ 1 minute remaining");
+    }
+
+    if(timeLeft <= 0){
+      clearInterval(timerInterval);
+      systemMsg("⛔ Chat ended");
+      chatStarted = false;
+    }
+  },1000);
+}
+
+/* ---------------- SEND ---------------- */
 function send(){
+  if(!chatStarted){
+    alert("Start chat first");
+    return;
+  }
+
   const text = msg.value.trim();
   if(!text) return;
   msg.value="";
+
   add(text,"me");
 
   pubnub.publish({
@@ -61,6 +183,14 @@ function send(){
       sender: pubnub.getUUID(),
       text
     }
+  });
+}
+
+/* ---------------- HELPERS ---------------- */
+function systemMsg(text){
+  pubnub.publish({
+    channel: CHANNEL,
+    message:{ sender:"SYSTEM", text }
   });
 }
 
@@ -75,9 +205,6 @@ function add(text, cls){
 
 </body>
 </html>
-
-
-
 
 
 
