@@ -4,68 +4,21 @@
 <meta charset="UTF-8">
 <title>Chat with Astrologer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:system-ui;
-  background:#f4f4f4;
-  height:100vh;
-  display:flex;
-  flex-direction:column
-}
-.header{
-  background:#F8CFAF;
-  padding:14px;
-  font-weight:700;
-  display:flex;
-  justify-content:space-between
-}
-.chat{
-  flex:1;
-  padding:12px;
-  overflow:auto
-}
-.msg{
-  max-width:75%;
-  padding:10px;
-  border-radius:12px;
-  margin-bottom:8px
-}
+body{margin:0;font-family:system-ui;background:#f4f4f4;height:100vh;display:flex;flex-direction:column}
+.header{background:#F8CFAF;padding:14px;font-weight:700;display:flex;justify-content:space-between}
+.chat{flex:1;padding:12px;overflow:auto}
+.msg{max-width:75%;padding:10px;border-radius:12px;margin-bottom:8px}
 .me{background:#ffe0cc;margin-left:auto}
 .them{background:#fff}
-.controls{
-  display:flex;
-  padding:10px;
-  gap:8px;
-  background:#fff
-}
-input{
-  flex:1;
-  padding:10px;
-  border-radius:20px;
-  border:1px solid #ccc
-}
-button{
-  padding:10px 16px;
-  border-radius:20px;
-  border:none;
-  background:#F8CFAF;
-  font-weight:700
-}
-#detailsBox{
-  padding:14px;
-  background:#fff
-}
-#detailsBox input{
-  width:100%;
-  padding:10px;
-  margin-bottom:8px;
-  border-radius:8px;
-  border:1px solid #ccc
-}
+.controls{display:flex;padding:10px;gap:8px;background:#fff}
+input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
+button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700}
+#detailsBox,#walletBox{padding:14px;background:#fff}
+#detailsBox input{width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #ccc}
+.rechargeBtns button{margin:6px 6px 0 0}
 </style>
 </head>
 
@@ -73,8 +26,8 @@ button{
 
 <!-- HEADER -->
 <div class="header">
-  <span>Chat with Astrologer Gautam</span>
-  ⏱️ <span id="timer">05:00</span>
+  <span>Astrologer Gautam</span>
+  <span>⏱️ <span id="timer">--:--</span> | 💰 ₹<span id="wallet">0</span></span>
 </div>
 
 <!-- CUSTOMER DETAILS -->
@@ -82,7 +35,20 @@ button{
   <input id="cname" placeholder="Full Name">
   <input id="cdob" type="date">
   <input id="cbirth" placeholder="Birth Place">
-  <button onclick="startChat()">Start Chat</button>
+  <button onclick="goToWallet()">Continue</button>
+</div>
+
+<!-- WALLET -->
+<div id="walletBox" style="display:none">
+  <strong>Recharge Wallet</strong>
+  <p>Astrologer charges ₹<span id="price"></span>/minute<br>
+     Minimum recharge: ₹<span id="minRecharge"></span></p>
+  <div class="rechargeBtns">
+    <button onclick="recharge(50)">₹50</button>
+    <button onclick="recharge(100)">₹100</button>
+    <button onclick="recharge(200)">₹200</button>
+    <button onclick="recharge(500)">₹500</button>
+  </div>
 </div>
 
 <!-- CHAT -->
@@ -97,6 +63,7 @@ button{
 <script>
 /* ---------------- CONFIG ---------------- */
 const CHANNEL = "astro_gautam_chat";
+const pricePerMinute = 10;
 
 /* ---------------- PUBNUB ---------------- */
 const pubnub = new PubNub({
@@ -105,96 +72,104 @@ const pubnub = new PubNub({
   uuid: "customer_" + Math.random().toString(36).slice(2,6)
 });
 
-pubnub.subscribe({ channels: [CHANNEL] });
-
+pubnub.subscribe({ channels:[CHANNEL] });
 pubnub.addListener({
-  message: e => {
-    if(e.message.sender === pubnub.getUUID()) return;
-    add(e.message.text, "them");
+  message:e=>{
+    if(e.message.sender===pubnub.getUUID()) return;
+    add(e.message.text,"them");
   }
 });
 
 /* ---------------- STATE ---------------- */
-let chatStarted = false;
-let timeLeft = 300;
-let timerInterval = null;
+let chatStarted=false;
+let wallet=0;
+let timeLeft=0;
+let timerInterval=null;
 
-/* ---------------- START CHAT ---------------- */
-function startChat(){
-  const name = cname.value.trim();
-  const dob = cdob.value;
-  const place = cbirth.value.trim();
+/* ---------------- FLOW ---------------- */
+price.textContent = pricePerMinute;
+minRecharge.textContent = pricePerMinute * 5;
 
-  if(!name || !dob || !place){
-    alert("Please fill all details");
+function goToWallet(){
+  if(!cname.value||!cdob.value||!cbirth.value){
+    alert("Fill all details");
+    return;
+  }
+  detailsBox.style.display="none";
+  walletBox.style.display="block";
+}
+
+function recharge(amount){
+  if(amount < pricePerMinute*5){
+    alert("Minimum recharge not met");
     return;
   }
 
-  document.getElementById("detailsBox").style.display = "none";
-  chatStarted = true;
+  wallet += amount;
+  walletBox.style.display="none";
+  document.getElementById("wallet").textContent = wallet;
 
   systemMsg(
-    "🧑 Customer Details\n" +
-    "Name: " + name + "\n" +
-    "DOB: " + dob + "\n" +
-    "Birth Place: " + place
+    `🧑 Customer Details\nName: ${cname.value}\nDOB: ${cdob.value}\nBirth Place: ${cbirth.value}`
   );
 
+  systemMsg(`💰 Wallet recharged: ₹${wallet}`);
+  startChat();
+}
+
+function startChat(){
+  chatStarted=true;
+  timeLeft = Math.floor((wallet / pricePerMinute) * 60);
   startTimer();
 }
 
 /* ---------------- TIMER ---------------- */
 function startTimer(){
-  timerInterval = setInterval(() => {
+  updateTimer();
+  timerInterval=setInterval(()=>{
     timeLeft--;
-
-    const m = String(Math.floor(timeLeft/60)).padStart(2,'0');
-    const s = String(timeLeft%60).padStart(2,'0');
-    timer.textContent = m + ":" + s;
-
-    if(timeLeft === 60){
-      systemMsg("⚠️ 1 minute remaining");
-    }
-
-    if(timeLeft <= 0){
+    if(timeLeft<=0){
       clearInterval(timerInterval);
       systemMsg("⛔ Chat ended");
-      chatStarted = false;
+      chatStarted=false;
+      return;
     }
+
+    if(timeLeft===60) systemMsg("⚠️ 1 minute remaining");
+    if(timeLeft===30) systemMsg("⚠️ 30 seconds remaining");
+
+    updateTimer();
   },1000);
 }
 
-/* ---------------- SEND ---------------- */
+function updateTimer(){
+  const m=String(Math.floor(timeLeft/60)).padStart(2,'0');
+  const s=String(timeLeft%60).padStart(2,'0');
+  timer.textContent = m+":"+s;
+}
+
+/* ---------------- CHAT ---------------- */
 function send(){
-  if(!chatStarted){
-    alert("Start chat first");
-    return;
-  }
-
-  const text = msg.value.trim();
-  if(!text) return;
+  if(!chatStarted){alert("Start chat first");return;}
+  const text=msg.value.trim();
+  if(!text)return;
   msg.value="";
-
   add(text,"me");
 
   pubnub.publish({
-    channel: CHANNEL,
-    message: {
-      sender: pubnub.getUUID(),
-      text
-    }
+    channel:CHANNEL,
+    message:{sender:pubnub.getUUID(),text}
   });
 }
 
-/* ---------------- HELPERS ---------------- */
 function systemMsg(text){
   pubnub.publish({
-    channel: CHANNEL,
-    message:{ sender:"SYSTEM", text }
+    channel:CHANNEL,
+    message:{sender:"SYSTEM",text}
   });
 }
 
-function add(text, cls){
+function add(text,cls){
   const d=document.createElement("div");
   d.className="msg "+cls;
   d.textContent=text;
