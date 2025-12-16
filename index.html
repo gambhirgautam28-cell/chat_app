@@ -5,17 +5,16 @@
 <title>Chat with Astrologer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
-body{margin:0;font-family:system-ui;background:#f6f2ec;height:100vh;display:flex;flex-direction:column}
-.header{background:#F8CFAF;padding:14px;display:flex;justify-content:space-between}
+body{margin:0;font-family:system-ui;background:#f4f4f4;height:100vh;display:flex;flex-direction:column}
+.header{background:#F8CFAF;padding:14px;font-weight:700}
 .chat{flex:1;padding:12px;overflow:auto}
-.msg{padding:10px 12px;border-radius:12px;margin-bottom:8px;max-width:75%}
+.msg{max-width:75%;padding:10px;border-radius:12px;margin-bottom:8px}
 .me{background:#ffe0cc;margin-left:auto}
 .them{background:#fff}
-.controls{display:flex;gap:8px;padding:10px}
+.controls{display:flex;padding:10px;gap:8px;background:#fff}
 input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
 button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700}
 </style>
@@ -23,10 +22,7 @@ button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-
 
 <body>
 
-<div class="header">
-  <strong>Astrologer Gautam</strong>
-  ⏱️ <span id="timer">--:--</span>
-</div>
+<div class="header">Chat with Astrologer Gautam</div>
 
 <div id="chat" class="chat"></div>
 
@@ -36,39 +32,35 @@ button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-
 </div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
-  authDomain: "connect-astro-e5309.firebaseapp.com",
-  projectId: "connect-astro-e5309"
-};
+const CHANNEL = "astro_gautam_chat";
 
-firebase.initializeApp(firebaseConfig);
-const functions = firebase.functions();
+const pubnub = new PubNub({
+  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
+  subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
+  uuid: "customer_" + Math.random().toString(36).slice(2,6)
+});
 
-const customerId = "cust_demo";
-const astrologerId = "Gautam";
-let sessionId = null;
+pubnub.subscribe({ channels: [CHANNEL] });
 
-// START CHAT
-async function startChat() {
-  const res = await functions.httpsCallable("chatNow")({
-    customerId,
-    astrologerId
-  });
-  sessionId = res.data.sessionId;
-}
+pubnub.addListener({
+  message: e => {
+    if(e.message.sender === pubnub.getUUID()) return;
+    add(e.message.text, "them");
+  }
+});
 
-// SEND MESSAGE
-async function send() {
+function send(){
   const text = msg.value.trim();
-  if (!text || !sessionId) return;
-  msg.value = "";
-  add(text, "me");
+  if(!text) return;
+  msg.value="";
+  add(text,"me");
 
-  await functions.httpsCallable("sendMessage")({
-    sessionId,
-    senderId: customerId,
-    text
+  pubnub.publish({
+    channel: CHANNEL,
+    message: {
+      sender: pubnub.getUUID(),
+      text
+    }
   });
 }
 
@@ -79,15 +71,10 @@ function add(text, cls){
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
-
-// AUTO START (for testing)
-startChat();
 </script>
 
 </body>
 </html>
-
-
 
 
 
