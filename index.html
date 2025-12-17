@@ -93,7 +93,7 @@ body{
   font-weight:600;
 }
 
-/* RECHARGE */
+/* RECHARGE MODAL */
 .rechargeModal{
   position:fixed;
   inset:0;
@@ -108,7 +108,16 @@ body{
   background:#fff;
   border-radius:20px 20px 0 0;
   padding:18px;
+  position:relative;
 }
+.closeX{
+  position:absolute;
+  top:10px;
+  right:14px;
+  font-size:18px;
+  cursor:pointer;
+}
+
 .amountGrid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -122,6 +131,7 @@ body{
   font-weight:600;
 }
 .amountGrid button.active{background:var(--yellow)}
+
 .payBtn{
   width:100%;
   margin-top:16px;
@@ -139,7 +149,8 @@ body{
 <div class="header">
   <div>
     Customer Chat<br>
-    <span id="astroStatus" class="status">Astrologer: Checking…</span>
+    <span id="astroStatus" class="status">Checking astrologer…</span><br>
+    ⏱️ <span id="timer">--:--</span>
   </div>
   <button class="rechargeBtn" onclick="openRecharge()">Recharge</button>
 </div>
@@ -162,6 +173,7 @@ body{
 
 <div id="rechargeModal" class="rechargeModal">
   <div class="rechargeBox">
+    <div class="closeX" onclick="closeRecharge()">✕</div>
     <div class="amountGrid">
       <button onclick="selectAmount(this,50)">50</button>
       <button onclick="selectAmount(this,100)">100</button>
@@ -174,10 +186,12 @@ body{
 <script>
 const CHANNEL="astro_gautam_chat";
 const uuid="Customer_"+Math.random().toString(36).slice(2,7);
+const pricePerMinute=10;
 
-let wallet=0,chatStarted=false,selectedAmount=50;
+let wallet=0,chatStarted=false,timeLeft=0,timerInterval=null,selectedAmount=50;
 
 const chat=document.getElementById("chat");
+const timerEl=document.getElementById("timer");
 
 const pubnub=new PubNub({
   publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
@@ -188,8 +202,9 @@ const pubnub=new PubNub({
 pubnub.subscribe({channels:[CHANNEL],withPresence:true});
 
 /* PRESENCE FIX */
-pubnub.hereNow({channels:[CHANNEL]},(s,r)=>{
-  astroStatus.textContent = r.channels[CHANNEL]?.occupancy>1
+pubnub.hereNow({channels:[CHANNEL]},(_,r)=>{
+  astroStatus.textContent =
+    r.channels[CHANNEL]?.occupancy>1
     ? "Astrologer: Online"
     : "Astrologer: Offline";
 });
@@ -230,15 +245,11 @@ Place: ${c_place.value}`,
 
 function send(){
   if(!chatStarted)return alert("Recharge first");
-  const text=msg.value.trim();
-  if(!text)return;
+  const t=msg.value.trim();
+  if(!t)return;
   msg.value="";
-  addMsg(text,"me",Date.now());
-
-  pubnub.publish({
-    channel:CHANNEL,
-    message:{sender:uuid,text,ts:Date.now()}
-  });
+  addMsg(t,"me",Date.now());
+  pubnub.publish({channel:CHANNEL,message:{sender:uuid,text:t,ts:Date.now()}});
 }
 
 function addMsg(text,type,ts){
@@ -250,7 +261,29 @@ function addMsg(text,type,ts){
   chat.scrollTop=chat.scrollHeight;
 }
 
+/* TIMER */
+function startTimer(){
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    if(timeLeft<=0){
+      clearInterval(timerInterval);
+      chatStarted=false;
+      addMsg("⛔ Session ended","system",Date.now());
+      return;
+    }
+    updateTimer();
+  },1000);
+}
+function updateTimer(){
+  timerEl.textContent=
+    String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
+    String(timeLeft%60).padStart(2,"0");
+}
+
+/* RECHARGE */
 function openRecharge(){rechargeModal.style.display="flex"}
+function closeRecharge(){rechargeModal.style.display="none"}
 function selectAmount(b,a){
   selectedAmount=a;
   document.querySelectorAll(".amountGrid button").forEach(x=>x.classList.remove("active"));
@@ -258,18 +291,16 @@ function selectAmount(b,a){
 }
 function demoPay(){
   wallet+=selectedAmount;
+  timeLeft=Math.floor((wallet/pricePerMinute)*60);
   chatStarted=true;
-  rechargeModal.style.display="none";
+  updateTimer();
+  startTimer();
+  closeRecharge();
 }
 </script>
 
 </body>
 </html>
-
-
-
-
-
 
 
 
