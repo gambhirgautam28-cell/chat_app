@@ -1,185 +1,244 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Chat with Astrologer</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Astrologer Chat</title>
 
 <style>
-body{margin:0;font-family:system-ui;background:#f4f4f4;height:100vh;display:flex;flex-direction:column}
-.header{background:#F8CFAF;padding:14px;font-weight:700;display:flex;justify-content:space-between}
-.chat{flex:1;padding:12px;overflow:auto}
-.msg{max-width:75%;padding:10px;border-radius:12px;margin-bottom:8px}
-.me{background:#ffe0cc;margin-left:auto}
-.them{background:#fff}
-.controls{display:flex;padding:10px;gap:8px;background:#fff}
-input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
-button{padding:10px 16px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700}
-#detailsBox,#walletBox{padding:14px;background:#fff}
-#detailsBox input{width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #ccc}
-.rechargeBtns button{margin:6px 6px 0 0}
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f2f2f2;
+  }
+  .header {
+    background: #7a1f2b;
+    color: #fff;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #ccc;
+  }
+  .info {
+    font-size: 14px;
+  }
+  .timer {
+    font-size: 13px;
+    color: #ffdd88;
+  }
+  .wallet {
+    font-size: 13px;
+    text-align: right;
+  }
+  .recharge-btn {
+    background: #fff;
+    color: #7a1f2b;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-top: 4px;
+    display: none;
+  }
+  .chat {
+    padding: 12px;
+    height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+  .msg {
+    margin-bottom: 10px;
+    max-width: 70%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .customer {
+    background: #e6d6d6;
+    margin-left: auto;
+  }
+  .astro {
+    background: #fff;
+  }
+  .system {
+    background: #ffe3e3;
+    color: #900;
+    text-align: center;
+    margin: 10px auto;
+  }
+  .input-area {
+    display: flex;
+    padding: 10px;
+    background: #fff;
+    gap: 8px;
+  }
+  input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+  button.send {
+    background: #7a1f2b;
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+  }
 </style>
 </head>
 
 <body>
 
-<!-- HEADER -->
 <div class="header">
-  <span>Astrologer Gautam</span>
-  <span>⏱️ <span id="timer">--:--</span> | 💰 ₹<span id="wallet">0</span></span>
-</div>
-
-<!-- CUSTOMER DETAILS -->
-<div id="detailsBox">
-  <input id="cname" placeholder="Full Name">
-  <input id="cdob" type="date">
-  <input id="cbirth" placeholder="Birth Place">
-  <button onclick="goToWallet()">Continue</button>
-</div>
-
-<!-- WALLET -->
-<div id="walletBox" style="display:none">
-  <strong>Recharge Wallet</strong>
-  <p>Astrologer charges ₹<span id="price"></span>/minute<br>
-     Minimum recharge: ₹<span id="minRecharge"></span></p>
-  <div class="rechargeBtns">
-    <button onclick="recharge(50)">₹50</button>
-    <button onclick="recharge(100)">₹100</button>
-    <button onclick="recharge(200)">₹200</button>
-    <button onclick="recharge(500)">₹500</button>
+  <div class="header-left">
+    <div class="avatar"></div>
+    <div class="info">
+      <div id="astroName">Astrologer</div>
+      <div class="timer">Remaining: <span id="time">--:--</span></div>
+    </div>
+  </div>
+  <div class="wallet">
+    ₹<span id="wallet">0</span><br/>
+    <button class="recharge-btn" id="rechargeBtn">Recharge</button>
   </div>
 </div>
 
-<!-- CHAT -->
-<div id="chat" class="chat"></div>
+<div class="chat" id="chat"></div>
 
-<!-- INPUT -->
-<div class="controls">
-  <input id="msg" placeholder="Type message…">
-  <button onclick="send()">Send</button>
+<div class="input-area">
+  <input id="messageInput" placeholder="Type message..." />
+  <button class="send" id="sendBtn">Send</button>
 </div>
 
-<script>
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, doc, getDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "connect-astro-e5309"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 /* ---------------- CONFIG ---------------- */
-const CHANNEL = "astro_gautam_chat";
-const pricePerMinute = 10;
+const customerId = "cust_a82k19";
+const astrologerId = "Gautam";
+/* ---------------------------------------- */
 
-/* ---------------- PUBNUB ---------------- */
-const pubnub = new PubNub({
-  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
-  subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
-  uuid: "customer_" + Math.random().toString(36).slice(2,6)
-});
+const chatBox = document.getElementById("chat");
+const walletEl = document.getElementById("wallet");
+const timeEl = document.getElementById("time");
+const rechargeBtn = document.getElementById("rechargeBtn");
 
-pubnub.subscribe({ channels:[CHANNEL] });
-pubnub.addListener({
-  message:e=>{
-    if(e.message.sender===pubnub.getUUID()) return;
-    add(e.message.text,"them");
-  }
-});
+let pricePerMinute = 0;
+let remainingSeconds = 0;
+let timer = null;
 
-/* ---------------- STATE ---------------- */
-let chatStarted=false;
-let wallet=0;
-let timeLeft=0;
-let timerInterval=null;
+/* -------- LOAD DATA -------- */
+async function startChat() {
+  const astro = await getDoc(doc(db, "astrologers", astrologerId));
+  const customer = await getDoc(doc(db, "customers", customerId));
 
-/* ---------------- FLOW ---------------- */
-price.textContent = pricePerMinute;
-minRecharge.textContent = pricePerMinute * 5;
+  pricePerMinute = astro.data().pricePerMinute;
+  document.getElementById("astroName").innerText = astro.data().name;
 
-function goToWallet(){
-  if(!cname.value||!cdob.value||!cbirth.value){
-    alert("Fill all details");
-    return;
-  }
-  detailsBox.style.display="none";
-  walletBox.style.display="block";
-}
+  const wallet = customer.data().wallet;
+  walletEl.innerText = wallet;
 
-function recharge(amount){
-  if(amount < pricePerMinute*5){
-    alert("Minimum recharge not met");
+  const minRequired = pricePerMinute * 5;
+
+  if (wallet < minRequired) {
+    addSystem(`Minimum recharge ₹${minRequired} required`);
+    rechargeBtn.style.display = "block";
     return;
   }
 
-  wallet += amount;
-  walletBox.style.display="none";
-  document.getElementById("wallet").textContent = wallet;
-
-  systemMsg(
-    `🧑 Customer Details\nName: ${cname.value}\nDOB: ${cdob.value}\nBirth Place: ${cbirth.value}`
-  );
-
-  systemMsg(`💰 Wallet recharged: ₹${wallet}`);
-  startChat();
-}
-
-function startChat(){
-  chatStarted=true;
-  timeLeft = Math.floor((wallet / pricePerMinute) * 60);
+  remainingSeconds = Math.floor((wallet / pricePerMinute) * 60);
   startTimer();
 }
 
-/* ---------------- TIMER ---------------- */
-function startTimer(){
+/* -------- TIMER -------- */
+function startTimer() {
   updateTimer();
-  timerInterval=setInterval(()=>{
-    timeLeft--;
-    if(timeLeft<=0){
-      clearInterval(timerInterval);
-      systemMsg("⛔ Chat ended");
-      chatStarted=false;
-      return;
+  timer = setInterval(() => {
+    remainingSeconds--;
+
+    if (remainingSeconds === 60) {
+      addSystem("⚠️ 1 minute left. Please recharge.");
+      rechargeBtn.style.display = "block";
     }
 
-    if(timeLeft===60) systemMsg("⚠️ 1 minute remaining");
-    if(timeLeft===30) systemMsg("⚠️ 30 seconds remaining");
+    if (remainingSeconds === 30) {
+      addSystem("⚠️ Only 30 seconds left!");
+    }
+
+    if (remainingSeconds <= 0) {
+      clearInterval(timer);
+      addSystem("⛔ Chat ended due to low balance.");
+      document.getElementById("sendBtn").disabled = true;
+    }
 
     updateTimer();
-  },1000);
+  }, 1000);
 }
 
-function updateTimer(){
-  const m=String(Math.floor(timeLeft/60)).padStart(2,'0');
-  const s=String(timeLeft%60).padStart(2,'0');
-  timer.textContent = m+":"+s;
+function updateTimer() {
+  const m = Math.floor(remainingSeconds / 60);
+  const s = remainingSeconds % 60;
+  timeEl.innerText = `${m}:${String(s).padStart(2,"0")}`;
+  walletEl.innerText = Math.floor((remainingSeconds / 60) * pricePerMinute);
 }
 
-/* ---------------- CHAT ---------------- */
-function send(){
-  if(!chatStarted){alert("Start chat first");return;}
-  const text=msg.value.trim();
-  if(!text)return;
-  msg.value="";
-  add(text,"me");
+/* -------- CHAT -------- */
+document.getElementById("sendBtn").onclick = async () => {
+  const input = document.getElementById("messageInput");
+  if (!input.value) return;
 
-  pubnub.publish({
-    channel:CHANNEL,
-    message:{sender:pubnub.getUUID(),text}
+  addMsg(input.value, "customer");
+  await addDoc(collection(db, "sessions","demo","messages"), {
+    text: input.value,
+    sender: "customer",
+    createdAt: serverTimestamp()
   });
+  input.value = "";
+};
+
+function addMsg(text, type) {
+  const d = document.createElement("div");
+  d.className = `msg ${type}`;
+  d.innerText = text;
+  chatBox.appendChild(d);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function systemMsg(text){
-  pubnub.publish({
-    channel:CHANNEL,
-    message:{sender:"SYSTEM",text}
-  });
+function addSystem(text) {
+  const d = document.createElement("div");
+  d.className = "msg system";
+  d.innerText = text;
+  chatBox.appendChild(d);
 }
 
-function add(text,cls){
-  const d=document.createElement("div");
-  d.className="msg "+cls;
-  d.textContent=text;
-  chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
-}
+/* -------- START -------- */
+startChat();
 </script>
 
 </body>
 </html>
+
 
 
 
