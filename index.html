@@ -9,6 +9,9 @@
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
+:root{--yellow:#FFDE59}
+*{box-sizing:border-box}
+
 body{
   margin:0;
   font-family:system-ui;
@@ -18,12 +21,17 @@ body{
   flex-direction:column;
 }
 
+/* HEADER */
 .header{
-  background:#FFDE59;
+  background:var(--yellow);
   padding:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
   font-weight:600;
 }
 
+/* CHAT */
 .chat{
   flex:1;
   padding:12px;
@@ -31,21 +39,18 @@ body{
 }
 
 .msg{
+  max-width:80%;
   padding:10px 12px;
   border-radius:12px;
   margin-bottom:8px;
-  max-width:80%;
+  font-size:14px;
 }
 
-.me{
-  background:#fff;
-  margin-left:auto;
-}
+.me{background:#fff;margin-left:auto}
+.astro{background:#e8f0ff}
+.system{background:#fff3cd;text-align:center}
 
-.astro{
-  background:#e8f0ff;
-}
-
+/* INPUT */
 .controls{
   display:flex;
   gap:8px;
@@ -63,86 +68,241 @@ body{
 .controls button{
   padding:10px 16px;
   border-radius:20px;
-  background:#FFDE59;
+  background:var(--yellow);
   border:none;
   font-weight:600;
+}
+
+/* RECHARGE MODAL */
+.rechargeModal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  justify-content:center;
+  align-items:flex-end;
+}
+
+.rechargeBox{
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border-radius:20px 20px 0 0;
+  padding:18px;
+}
+
+.amountGrid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.amountGrid button{
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  background:#f7f7f7;
+  font-weight:600;
+}
+
+.amountGrid button.active{
+  background:var(--yellow);
+}
+
+.payBtn{
+  width:100%;
+  margin-top:16px;
+  padding:14px;
+  border-radius:18px;
+  background:var(--yellow);
+  border:none;
+  font-weight:600;
+}
+
+.closeBtn{
+  width:100%;
+  margin-top:10px;
+  padding:12px;
+  border-radius:18px;
+  border:none;
+  background:#eee;
 }
 </style>
 </head>
 
 <body>
 
+<!-- HEADER -->
 <div class="header">
-  Customer Chat
+  <div>
+    Customer Chat<br>
+    ⏱️ <span id="timer">--:--</span>
+  </div>
+  <div>
+    ₹--<br>
+    <button onclick="openRecharge()">Recharge</button>
+  </div>
 </div>
 
+<!-- CHAT -->
 <div id="chat" class="chat"></div>
 
+<!-- INPUT -->
 <div class="controls">
-  <input id="msg" placeholder="Type your message…" />
+  <input id="msg" placeholder="Type message…" />
   <button onclick="send()">Send</button>
 </div>
 
-<script>
-/* ================= PUBNUB SETUP ================= */
-const CHANNEL = "astro_gautam_chat";
+<!-- RECHARGE MODAL -->
+<div id="rechargeModal" class="rechargeModal">
+  <div class="rechargeBox">
+    <h3>Add money</h3>
 
+    <div class="amountGrid">
+      <button onclick="selectAmount(this,50)">₹50</button>
+      <button onclick="selectAmount(this,100)">₹100</button>
+      <button onclick="selectAmount(this,200)">₹200</button>
+    </div>
+
+    <button class="payBtn" onclick="demoPay()">Proceed to Pay</button>
+    <button class="closeBtn" onclick="closeRecharge()">Cancel</button>
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const CHANNEL = "astro_gautam_chat";
+const pricePerMinute = 10;
+
+/* ================= STATE ================= */
+let wallet = 0;
+let timeLeft = 0;
+let chatStarted = false;
+let timerInterval = null;
+let selectedAmount = 50;
+
+/* ================= DOM ================= */
+const chat = document.getElementById("chat");
+const timerEl = document.getElementById("timer");
+
+/* ================= PUBNUB ================= */
 const pubnub = new PubNub({
-  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
-  subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
-  uuid: "Customer_" + Math.random().toString(36).slice(2,7)
+  publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
+  subscribeKey:"sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
+  uuid:"Customer_"+Math.random().toString(36).slice(2,7)
 });
 
-const chat = document.getElementById("chat");
+pubnub.subscribe({channels:[CHANNEL]});
 
-/* ================= SUBSCRIBE ================= */
-pubnub.subscribe({ channels: [CHANNEL] });
-
-/* ================= RECEIVE MESSAGES ================= */
 pubnub.addListener({
-  message: function (event) {
-    const m = event.message;
-
-    // Ignore own messages
-    if (m.sender === pubnub.getUUID()) return;
-
-    addMsg("Astrologer: " + m.text, "astro");
+  message:e=>{
+    const m=e.message;
+    if(m.sender===pubnub.getUUID())return;
+    addMsg("Astrologer: "+m.text,"astro");
   }
 });
 
-/* ================= SEND MESSAGE ================= */
+/* ================= CHAT ================= */
 function send(){
-  const input = document.getElementById("msg");
-  const text = input.value.trim();
-  if(!text) return;
+  if(!chatStarted){
+    alert("Please recharge to start chat");
+    return;
+  }
 
-  input.value = "";
+  const text=msg.value.trim();
+  if(!text)return;
+  msg.value="";
 
-  // Show locally
-  addMsg("You: " + text, "me");
+  addMsg("You: "+text,"me");
 
-  // Send to astrologer
   pubnub.publish({
-    channel: CHANNEL,
-    message: {
-      sender: pubnub.getUUID(),
-      text: text
-    }
+    channel:CHANNEL,
+    message:{sender:pubnub.getUUID(),text}
   });
 }
 
-/* ================= UI HELPER ================= */
-function addMsg(text, type){
-  const d = document.createElement("div");
-  d.className = "msg " + (type === "me" ? "me" : "astro");
-  d.textContent = text;
+function addMsg(text,type){
+  const d=document.createElement("div");
+  d.className="msg "+type;
+  d.textContent=text;
   chat.appendChild(d);
-  chat.scrollTop = chat.scrollHeight;
+  chat.scrollTop=chat.scrollHeight;
+}
+
+/* ================= RECHARGE ================= */
+function openRecharge(){
+  rechargeModal.style.display="flex";
+  highlightDefault();
+}
+
+function closeRecharge(){
+  rechargeModal.style.display="none";
+}
+
+function highlightDefault(){
+  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
+  document.querySelector(".amountGrid button").classList.add("active");
+}
+
+function selectAmount(btn,a){
+  selectedAmount=a;
+  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+function demoPay(){
+  wallet+=selectedAmount;
+
+  if(!chatStarted){
+    startChat();
+  }else{
+    recalcTime();
+  }
+
+  systemMsg("Session started");
+  closeRecharge();
+}
+
+/* ================= TIMER ================= */
+function startChat(){
+  chatStarted=true;
+  recalcTime();
+  startTimer();
+}
+
+function recalcTime(){
+  timeLeft=Math.floor((wallet/pricePerMinute)*60);
+  updateTimer();
+}
+
+function startTimer(){
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    if(timeLeft<=0){
+      clearInterval(timerInterval);
+      chatStarted=false;
+      systemMsg("⛔ Session ended");
+      return;
+    }
+    updateTimer();
+  },1000);
+}
+
+function updateTimer(){
+  timerEl.textContent=
+    String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
+    String(timeLeft%60).padStart(2,"0");
+}
+
+function systemMsg(t){
+  addMsg(t,"system");
 }
 </script>
 
 </body>
 </html>
+
 
 
 
