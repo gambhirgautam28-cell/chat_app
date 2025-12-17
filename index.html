@@ -39,21 +39,21 @@ button{padding:10px 14px;border-radius:20px;border:none;background:#F8CFAF;font-
 <!-- BIRTH DETAILS FORM -->
 <div id="details" class="section">
   <h3>Enter Birth Details</h3>
-  <input id="name" placeholder="Full Name">
-  <input id="gender" placeholder="Gender">
-  <input id="dob" type="date">
-  <input id="birthTime" placeholder="Birth Time (HH:MM)">
-  <input id="birthPlace" placeholder="Birth Place">
+  <input id="c_name" placeholder="Full Name">
+  <input id="c_gender" placeholder="Gender">
+  <input id="c_dob" type="date">
+  <input id="c_time" placeholder="Birth Time (HH:MM)">
+  <input id="c_place" placeholder="Birth Place">
   <button onclick="proceedToRecharge()">Continue</button>
 </div>
 
 <!-- RECHARGE -->
 <div id="recharge" class="section recharge" style="display:none">
   <p>Minimum recharge: ₹<span id="minRecharge"></span></p>
-  <button onclick="recharge(50)">₹50</button>
-  <button onclick="recharge(100)">₹100</button>
-  <button onclick="recharge(200)">₹200</button>
-  <button onclick="recharge(500)">₹500</button>
+  <button onclick="rechargeWallet(50)">₹50</button>
+  <button onclick="rechargeWallet(100)">₹100</button>
+  <button onclick="rechargeWallet(200)">₹200</button>
+  <button onclick="rechargeWallet(500)">₹500</button>
 </div>
 
 <!-- CHAT -->
@@ -66,40 +66,51 @@ button{padding:10px 14px;border-radius:20px;border:none;background:#F8CFAF;font-
 </div>
 
 <script>
-/* ---------------- CONFIG ---------------- */
-const pricePerMinute = 10;   // change per astrologer
+/* -------- CONFIG -------- */
+const pricePerMinute = 10;
 const minimumMinutes = 5;
 
-/* ---------------- STATE ---------------- */
+/* -------- STATE -------- */
 let wallet = 0;
 let timeLeft = 0;
 let chatStarted = false;
 let timerInterval = null;
 
-/* ---------------- DOM ---------------- */
+/* -------- DOM -------- */
 const chat = document.getElementById("chat");
 const timerEl = document.getElementById("timer");
 const walletEl = document.getElementById("wallet");
+const minRechargeEl = document.getElementById("minRecharge");
 
-/* ---------------- FLOW ---------------- */
-minRecharge.textContent = pricePerMinute * minimumMinutes;
+minRechargeEl.textContent = pricePerMinute * minimumMinutes;
 
+/* -------- FORM -------- */
 function proceedToRecharge(){
-  if(!name.value || !gender.value || !dob.value || !birthTime.value || !birthPlace.value){
+  const name = document.getElementById("c_name").value.trim();
+  const gender = document.getElementById("c_gender").value.trim();
+  const dob = document.getElementById("c_dob").value;
+  const time = document.getElementById("c_time").value.trim();
+  const place = document.getElementById("c_place").value.trim();
+
+  if(!name || !gender || !dob || !time || !place){
     alert("Please fill all details");
     return;
   }
 
-  details.style.display="none";
-  recharge.style.display="block";
+  document.getElementById("details").style.display = "none";
+  document.getElementById("recharge").style.display = "block";
+
+  window.customerDetails = { name, gender, dob, time, place };
 }
 
 function showRecharge(){
-  recharge.style.display="block";
+  document.getElementById("recharge").style.display = "block";
 }
 
-function recharge(amount){
+/* -------- WALLET -------- */
+function rechargeWallet(amount){
   const min = pricePerMinute * minimumMinutes;
+
   if(wallet === 0 && amount < min){
     alert(`Minimum recharge is ₹${min}`);
     return;
@@ -107,7 +118,7 @@ function recharge(amount){
 
   wallet += amount;
   walletEl.textContent = wallet;
-  recharge.style.display="none";
+  document.getElementById("recharge").style.display = "none";
 
   if(!chatStarted){
     startChat();
@@ -118,16 +129,18 @@ function recharge(amount){
   systemMsg(`💰 Wallet recharged ₹${amount}`);
 }
 
+/* -------- CHAT START -------- */
 function startChat(){
   chatStarted = true;
 
+  const d = window.customerDetails;
   systemMsg(
 `🧑 Customer Details
-Name: ${name.value}
-Gender: ${gender.value}
-DOB: ${dob.value}
-Birth Time: ${birthTime.value}
-Birth Place: ${birthPlace.value}`
+Name: ${d.name}
+Gender: ${d.gender}
+DOB: ${d.dob}
+Birth Time: ${d.time}
+Birth Place: ${d.place}`
   );
 
   recalcTime();
@@ -139,7 +152,7 @@ function recalcTime(){
   updateTimer();
 }
 
-/* ---------------- TIMER ---------------- */
+/* -------- TIMER -------- */
 function startTimer(){
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
@@ -170,20 +183,21 @@ function updateTimer(){
   timerEl.textContent = `${m}:${s}`;
 }
 
-/* ---------------- CHAT ---------------- */
+/* -------- MESSAGES -------- */
 function send(){
   if(!chatStarted){
     alert("Chat not active");
     return;
   }
-  if(!msg.value.trim()) return;
+  const input = document.getElementById("msg");
+  if(!input.value.trim()) return;
 
   const d=document.createElement("div");
   d.className="msg me";
-  d.textContent=msg.value;
+  d.textContent=input.value;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
-  msg.value="";
+  input.value="";
 }
 
 function systemMsg(text){
@@ -197,6 +211,7 @@ function systemMsg(text){
 
 </body>
 </html>
+
 
 
 
