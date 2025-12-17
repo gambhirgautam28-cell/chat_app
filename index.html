@@ -91,6 +91,12 @@ firebase.initializeApp({
   appId: "1:19853749942:web:9857d058fcaeda0ba90017"
 });
 
+  } catch (e) {
+  console.error("RECHARGE ERROR:", e);
+  alert(e.message || "Recharge failed");
+}
+
+
 
 const functions = firebase.functions();
 const demoRecharge = functions.httpsCallable("demoRecharge");
