@@ -27,20 +27,20 @@ body{
   display:flex;
   justify-content:space-between;
   align-items:center;
+}
+
+.status{font-size:12px}
+
+.rechargeBtn{
+  background:#fff;
+  padding:6px 16px;
+  border-radius:20px;
+  border:none;
   font-weight:600;
 }
 
-.status{
-  font-size:12px;
-  font-weight:500;
-}
-
 /* FORM */
-.section{
-  background:#fff;
-  padding:14px;
-}
-
+.section{background:#fff;padding:14px}
 .section input{
   width:100%;
   padding:12px;
@@ -48,7 +48,6 @@ body{
   border-radius:12px;
   border:1px solid #ccc;
 }
-
 .section button{
   width:100%;
   padding:14px;
@@ -59,12 +58,7 @@ body{
 }
 
 /* CHAT */
-.chat{
-  flex:1;
-  padding:12px;
-  overflow-y:auto;
-}
-
+.chat{flex:1;padding:12px;overflow-y:auto}
 .msg{
   max-width:80%;
   padding:10px 12px;
@@ -72,10 +66,9 @@ body{
   margin-bottom:6px;
   font-size:14px;
 }
-
 .me{background:#fff;margin-left:auto}
 .astro{background:#e8f0ff}
-.system{background:#fff3cd;text-align:center;font-size:13px}
+.system{background:#fff3cd;text-align:center}
 
 .time{
   font-size:11px;
@@ -85,20 +78,13 @@ body{
 }
 
 /* INPUT */
-.controls{
-  display:flex;
-  gap:8px;
-  padding:10px;
-  background:#fff;
-}
-
+.controls{display:flex;gap:8px;padding:10px;background:#fff}
 .controls input{
   flex:1;
   padding:10px;
   border-radius:20px;
   border:1px solid #ccc;
 }
-
 .controls button{
   padding:10px 16px;
   border-radius:20px;
@@ -116,7 +102,6 @@ body{
   justify-content:center;
   align-items:flex-end;
 }
-
 .rechargeBox{
   width:100%;
   max-width:420px;
@@ -124,13 +109,11 @@ body{
   border-radius:20px 20px 0 0;
   padding:18px;
 }
-
 .amountGrid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:10px;
 }
-
 .amountGrid button{
   padding:14px;
   border-radius:12px;
@@ -138,9 +121,7 @@ body{
   background:#f7f7f7;
   font-weight:600;
 }
-
 .amountGrid button.active{background:var(--yellow)}
-
 .payBtn{
   width:100%;
   margin-top:16px;
@@ -158,17 +139,16 @@ body{
 <div class="header">
   <div>
     Customer Chat<br>
-    <span class="status" id="astroStatus">Astrologer: Offline</span>
+    <span id="astroStatus" class="status">Astrologer: Checking…</span>
   </div>
-  <button onclick="openRecharge()">Recharge</button>
+  <button class="rechargeBtn" onclick="openRecharge()">Recharge</button>
 </div>
 
-<!-- DETAILS -->
 <div id="details" class="section">
   <input id="c_name" placeholder="Full Name">
   <input id="c_gender" placeholder="Gender">
   <input id="c_dob" type="date">
-  <input id="c_time" placeholder="Birth Time (HH:MM)">
+  <input id="c_time" placeholder="Birth Time">
   <input id="c_place" placeholder="Birth Place">
   <button onclick="submitDetails()">Continue</button>
 </div>
@@ -192,30 +172,33 @@ body{
 </div>
 
 <script>
-/* CONFIG */
 const CHANNEL="astro_gautam_chat";
-const pricePerMinute=10;
+const uuid="Customer_"+Math.random().toString(36).slice(2,7);
 
-/* STATE */
-let wallet=0,timeLeft=0,chatStarted=false,selectedAmount=50,timerInterval=null;
+let wallet=0,chatStarted=false,selectedAmount=50;
 
-/* DOM */
 const chat=document.getElementById("chat");
 
-/* PUBNUB */
 const pubnub=new PubNub({
   publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
   subscribeKey:"sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
-  uuid:"Customer_"+Math.random().toString(36).slice(2,7)
+  uuid
 });
 
 pubnub.subscribe({channels:[CHANNEL],withPresence:true});
 
+/* PRESENCE FIX */
+pubnub.hereNow({channels:[CHANNEL]},(s,r)=>{
+  astroStatus.textContent = r.channels[CHANNEL]?.occupancy>1
+    ? "Astrologer: Online"
+    : "Astrologer: Offline";
+});
+
 pubnub.addListener({
   message:e=>{
     const m=e.message;
-    if(m.sender===pubnub.getUUID())return;
-    addMsg(m.text,"astro",e.timetoken);
+    if(m.sender===uuid)return;
+    addMsg(m.text,"astro",m.ts);
   },
   presence:e=>{
     if(e.uuid==="Astrologer_Gautam"){
@@ -224,68 +207,64 @@ pubnub.addListener({
   }
 });
 
-/* DETAILS SEND */
 function submitDetails(){
-  if(!c_name.value||!c_gender.value||!c_dob.value||!c_time.value||!c_place.value){
-    alert("Fill all details");return;
-  }
-
   details.style.display="none";
   chat.style.display="block";
   controls.style.display="flex";
   openRecharge();
 
-  const detailsMsg=
-`🧾 New Customer Details
+  pubnub.publish({
+    channel:CHANNEL,
+    message:{
+      sender:uuid,
+      text:`🧾 Customer Details
 Name: ${c_name.value}
 Gender: ${c_gender.value}
 DOB: ${c_dob.value}
 Time: ${c_time.value}
-Place: ${c_place.value}`;
-
-  pubnub.publish({
-    channel:CHANNEL,
-    message:{sender:pubnub.getUUID(),text:detailsMsg}
+Place: ${c_place.value}`,
+      ts:Date.now()
+    }
   });
 }
 
-/* CHAT */
 function send(){
-  if(!chatStarted)return alert("Please recharge first");
+  if(!chatStarted)return alert("Recharge first");
   const text=msg.value.trim();
   if(!text)return;
   msg.value="";
   addMsg(text,"me",Date.now());
-  pubnub.publish({channel:CHANNEL,message:{sender:pubnub.getUUID(),text}});
+
+  pubnub.publish({
+    channel:CHANNEL,
+    message:{sender:uuid,text,ts:Date.now()}
+  });
 }
 
-function addMsg(text,type,time){
+function addMsg(text,type,ts){
   const d=document.createElement("div");
   d.className="msg "+type;
   d.innerHTML=text.replace(/\n/g,"<br>")+
-    `<div class="time">${new Date(time||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>`;
+    `<div class="time">${new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>`;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
 
-/* RECHARGE */
 function openRecharge(){rechargeModal.style.display="flex"}
-function selectAmount(btn,a){
+function selectAmount(b,a){
   selectedAmount=a;
-  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+  document.querySelectorAll(".amountGrid button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
 }
 function demoPay(){
   wallet+=selectedAmount;
   chatStarted=true;
-  closeRecharge();
+  rechargeModal.style.display="none";
 }
-function closeRecharge(){rechargeModal.style.display="none"}
 </script>
 
 </body>
 </html>
-
 
 
 
