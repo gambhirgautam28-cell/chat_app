@@ -34,11 +34,37 @@ body{
 }
 
 .header strong{font-size:16px}
+
 .header button{
   background:#fff;
   border-radius:20px;
   padding:6px 14px;
   font-weight:600;
+  border:none;
+}
+
+/* ================= FORM ================= */
+.section{
+  background:#fff;
+  padding:14px;
+}
+
+.section input{
+  width:100%;
+  padding:12px;
+  margin-bottom:10px;
+  border-radius:12px;
+  border:1px solid #ccc;
+}
+
+.section button{
+  width:100%;
+  padding:14px;
+  border-radius:24px;
+  background:var(--yellow);
+  font-size:16px;
+  font-weight:600;
+  border:none;
 }
 
 /* ================= CHAT ================= */
@@ -87,20 +113,7 @@ body{
   padding:12px 18px;
   border-radius:24px;
   font-weight:600;
-}
-
-/* ================= FORM ================= */
-.section{
-  background:#fff;
-  padding:14px;
-}
-
-.section input{
-  width:100%;
-  padding:12px;
-  margin-bottom:10px;
-  border-radius:10px;
-  border:1px solid #ccc;
+  border:none;
 }
 
 /* ================= RECHARGE MODAL ================= */
@@ -171,6 +184,7 @@ body{
   background:var(--yellow);
   font-size:16px;
   font-weight:600;
+  border:none;
 }
 
 .closeBtn{
@@ -179,23 +193,26 @@ body{
   padding:12px;
   background:#eee;
   border-radius:18px;
+  border:none;
 }
 </style>
 </head>
 
 <body>
 
+<!-- HEADER -->
 <div class="header">
   <div>
     <strong>Astrologer Gautam</strong><br>
     ⏱️ <span id="timer">--:--</span>
   </div>
   <div>
-    💰 ₹<span id="wallet">0</span><br>
+    ₹<span id="wallet">0</span><br>
     <button onclick="showRecharge()">Recharge</button>
   </div>
 </div>
 
+<!-- DETAILS -->
 <div id="details" class="section">
   <input id="c_name" placeholder="Full Name">
   <input id="c_gender" placeholder="Gender">
@@ -205,13 +222,16 @@ body{
   <button onclick="proceedToChat()">Continue</button>
 </div>
 
+<!-- CHAT -->
 <div id="chat" class="chat"></div>
 
+<!-- INPUT -->
 <div class="controls">
   <input id="msg" placeholder="Type message…">
   <button onclick="send()">Send</button>
 </div>
 
+<!-- RECHARGE MODAL -->
 <div id="rechargeModal" class="rechargeModal">
   <div class="rechargeBox">
     <h2>Add money to wallet</h2>
@@ -239,12 +259,14 @@ body{
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
-const pricePerMinute=10, minimumMinutes=5;
+const pricePerMinute=10;
+const minimumMinutes=5;
+
 let wallet=0,timeLeft=0,chatStarted=false,timerInterval=null;
 
 function proceedToChat(){
   if(!c_name.value||!c_gender.value||!c_dob.value||!c_time.value||!c_place.value){
-    alert("Fill all details");return;
+    alert("Please fill all details");return;
   }
   details.style.display="none";
   showRecharge();
@@ -256,12 +278,16 @@ function setAmount(a){customAmount.value=a}
 
 function payNow(){
   const a=Number(customAmount.value);
-  if(a<pricePerMinute*minimumMinutes)return alert("Amount too low");
+  if(a<pricePerMinute*minimumMinutes){
+    alert("Minimum recharge is ₹"+pricePerMinute*minimumMinutes);
+    return;
+  }
 
   new Razorpay({
-    key:"RAZORPAY_KEY_ID",
+    key:"RAZORPAY_KEY_ID", /* replace with LIVE key */
     amount:a*100,
     currency:"INR",
+    name:"Astrologer Chat",
     handler:()=>{
       wallet+=a;
       walletEl.textContent=wallet;
@@ -271,19 +297,29 @@ function payNow(){
   }).open();
 }
 
-function startChat(){chatStarted=true;recalcTime();startTimer()}
-function recalcTime(){timeLeft=Math.floor(wallet/pricePerMinute*60);updateTimer()}
+function startChat(){
+  chatStarted=true;
+  recalcTime();
+  startTimer();
+}
+
+function recalcTime(){
+  timeLeft=Math.floor(wallet/pricePerMinute*60);
+  updateTimer();
+}
+
 function startTimer(){
   clearInterval(timerInterval);
   timerInterval=setInterval(()=>{
     if(--timeLeft<=0){
       clearInterval(timerInterval);
       chatStarted=false;
-      systemMsg("⛔ Chat ended");
+      systemMsg("⛔ Chat ended due to insufficient balance.");
     }
     updateTimer();
   },1000);
 }
+
 function updateTimer(){
   timer.textContent=
     String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
@@ -309,6 +345,7 @@ function systemMsg(t){
 
 </body>
 </html>
+
 
 
 
