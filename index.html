@@ -1,44 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Chat with Astrologer</title>
+<meta charset="UTF-8">
+<title>Astrologer Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body { margin:0; font-family: system-ui; background:#f4f4f4; }
-.header {
-  background:#8b1d2c; color:#fff; padding:12px;
-  display:flex; align-items:center; gap:10px;
+body{margin:0;font-family:system-ui;background:#f4f4f4;height:100vh;display:flex;flex-direction:column}
+.header{background:#F8CFAF;padding:12px;display:flex;justify-content:space-between;align-items:center}
+.chat{flex:1;padding:12px;overflow:auto}
+.msg{max-width:75%;padding:10px;border-radius:12px;margin-bottom:8px}
+.me{background:#ffe0cc;margin-left:auto}
+.system{background:#fff3cd;color:#7a4b00;text-align:center;margin:8px auto}
+.controls{display:flex;padding:10px;gap:8px;background:#fff}
+input{flex:1;padding:10px;border-radius:20px;border:1px solid #ccc}
+button{padding:10px 14px;border-radius:20px;border:none;background:#F8CFAF;font-weight:700}
+
+.section{background:#fff;padding:14px}
+.section input{width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #ccc}
+.recharge button{margin:6px 6px 0 0}
+
+/* ================= ADDITIONAL CSS ================= */
+#walletFab{
+  position:fixed;
+  right:16px;
+  bottom:90px;
+  width:56px;
+  height:56px;
+  background:#F8CFAF;
+  border-radius:50%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  box-shadow:0 6px 16px rgba(0,0,0,.25);
+  cursor:pointer;
+  z-index:999;
 }
-.header img { width:38px; height:38px; border-radius:50%; }
-.header .right { margin-left:auto; display:flex; gap:12px; align-items:center; }
-.wallet { cursor:pointer; }
-.timer { color:#ffd966; font-weight:600; }
 
-.chat { padding:14px; height:70vh; overflow:auto; }
-.msg { background:#fff; padding:10px; border-radius:10px; margin-bottom:8px; width:fit-content; }
-.me { background:#ffe7dc; margin-left:auto; }
-
-.input {
-  display:flex; padding:10px; gap:10px; background:#fff;
+#walletFab img{
+  width:28px;
+  height:28px;
 }
-input { flex:1; padding:10px; border-radius:20px; border:1px solid #ddd; }
-button { padding:10px 16px; border-radius:20px; border:none; background:#ffb37b; font-weight:600; }
 
-.overlay {
-  position:fixed; inset:0; background:rgba(0,0,0,.5);
-  display:none; align-items:center; justify-content:center;
+.walletModal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  justify-content:center;
+  align-items:flex-end;
+  z-index:1000;
 }
-.card {
-  background:#fff; padding:20px; border-radius:14px; width:90%; max-width:380px;
+
+.walletBox{
+  background:#fff;
+  width:100%;
+  max-width:420px;
+  border-radius:20px 20px 0 0;
+  padding:20px;
 }
-.card h3 { margin-top:0; }
 
-.recharge-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.recharge { padding:14px; border:1px solid #ddd; border-radius:10px; text-align:center; cursor:pointer; }
+.amounts{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin:16px 0;
+}
 
-.hidden { display:none; }
+.amounts button{
+  padding:14px;
+  font-size:16px;
+  border-radius:12px;
+  border:1px solid #ccc;
+  background:#f8f8f8;
+}
+
+.closeBtn{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  background:#eee;
+  border:none;
+}
+/* ================= END ADDITIONAL CSS ================= */
 </style>
 </head>
 
@@ -46,152 +90,246 @@ button { padding:10px 16px; border-radius:20px; border:none; background:#ffb37b;
 
 <!-- HEADER -->
 <div class="header">
-  <img src="https://via.placeholder.com/80"/>
   <div>
-    <div><b>Astrologer Gautam</b></div>
-    <div class="timer" id="timer">00:00</div>
+    <strong>Astrologer Gautam</strong><br>
+    ⏱️ <span id="timer">--:--</span>
   </div>
+  <div>
+    💰 ₹<span id="wallet">0</span><br>
+    <button onclick="showRecharge()">Recharge</button>
+  </div>
+</div>
 
-  <div class="right">
-    <div class="wallet" onclick="openWallet()">💰 ₹<span id="wallet">0</span></div>
-    <button onclick="endChat()">End</button>
-  </div>
+<!-- BIRTH DETAILS FORM -->
+<div id="details" class="section">
+  <h3>Enter Birth Details</h3>
+  <input id="c_name" placeholder="Full Name">
+  <input id="c_gender" placeholder="Gender">
+  <input id="c_dob" type="date">
+  <input id="c_time" placeholder="Birth Time (HH:MM)">
+  <input id="c_place" placeholder="Birth Place">
+  <button onclick="proceedToRecharge()">Continue</button>
+</div>
+
+<!-- RECHARGE -->
+<div id="recharge" class="section recharge" style="display:none">
+  <p>Minimum recharge: ₹<span id="minRecharge"></span></p>
+  <button onclick="rechargeWallet(50)">₹50</button>
+  <button onclick="rechargeWallet(100)">₹100</button>
+  <button onclick="rechargeWallet(200)">₹200</button>
+  <button onclick="rechargeWallet(500)">₹500</button>
 </div>
 
 <!-- CHAT -->
-<div class="chat" id="chat"></div>
+<div id="chat" class="chat"></div>
 
 <!-- INPUT -->
-<div class="input">
-  <input id="text" placeholder="Type message..." />
+<div class="controls">
+  <input id="msg" placeholder="Type message…">
   <button onclick="send()">Send</button>
 </div>
 
-<!-- BIRTH FORM -->
-<div class="overlay" id="formOverlay">
-  <div class="card">
-    <h3>Enter Birth Details</h3>
-    <input id="name" placeholder="Full Name"/><br><br>
-    <input id="dob" type="date"/><br><br>
-    <input id="time" type="time"/><br><br>
-    <input id="place" placeholder="Birth Place"/><br><br>
-    <button onclick="startChat()">Start Chat</button>
+<!-- ================= ADDITIONAL HTML ================= -->
+
+<!-- FLOATING WALLET ICON -->
+<div id="walletFab" onclick="openWalletModal()">
+  <img src="wallet-icon.png">
+</div>
+
+<!-- WALLET MODAL -->
+<div id="walletModal" class="walletModal">
+  <div class="walletBox">
+    <h3>Add money to wallet</h3>
+
+    <div class="amounts">
+      <button onclick="startPayment(50)">₹50</button>
+      <button onclick="startPayment(100)">₹100</button>
+      <button onclick="startPayment(200)">₹200</button>
+      <button onclick="startPayment(500)">₹500</button>
+    </div>
+
+    <button class="closeBtn" onclick="closeWalletModal()">Close</button>
   </div>
 </div>
 
-<!-- WALLET -->
-<div class="overlay" id="walletOverlay">
-  <div class="card">
-    <h3>Add Money</h3>
-    <div class="recharge-grid">
-      <div class="recharge" onclick="addMoney(50)">₹50</div>
-      <div class="recharge" onclick="addMoney(100)">₹100</div>
-      <div class="recharge" onclick="addMoney(200)">₹200</div>
-      <div class="recharge" onclick="addMoney(500)">₹500</div>
-      <div class="recharge" onclick="addMoney(1000)">₹1000</div>
-      <div class="recharge" onclick="addMoney(5000)">₹5000</div>
-    </div>
-    <br>
-    <button onclick="closeWallet()">Close</button>
-  </div>
-</div>
+<!-- RAZORPAY SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
-/* CONFIG */
-const pricePerMinute = 10; // comes from astrologer
+/* -------- CONFIG -------- */
+const pricePerMinute = 10;
+const minimumMinutes = 5;
+
+/* -------- STATE -------- */
 let wallet = 0;
-let seconds = 0;
-let timerInt;
+let timeLeft = 0;
+let chatStarted = false;
+let timerInterval = null;
 
-/* UI INIT */
-document.getElementById("formOverlay").style.display = "flex";
+/* -------- DOM -------- */
+const chat = document.getElementById("chat");
+const timerEl = document.getElementById("timer");
+const walletEl = document.getElementById("wallet");
+const minRechargeEl = document.getElementById("minRecharge");
 
-/* CHAT */
-function send(){
-  if(seconds <= 0) return;
-  const t = text.value.trim();
-  if(!t) return;
-  addMsg(t,true);
-  text.value="";
+minRechargeEl.textContent = pricePerMinute * minimumMinutes;
+
+/* -------- FORM -------- */
+function proceedToRecharge(){
+  const name = document.getElementById("c_name").value.trim();
+  const gender = document.getElementById("c_gender").value.trim();
+  const dob = document.getElementById("c_dob").value;
+  const time = document.getElementById("c_time").value.trim();
+  const place = document.getElementById("c_place").value.trim();
+
+  if(!name || !gender || !dob || !time || !place){
+    alert("Please fill all details");
+    return;
+  }
+
+  document.getElementById("details").style.display = "none";
+  document.getElementById("recharge").style.display = "block";
+
+  window.customerDetails = { name, gender, dob, time, place };
 }
 
-function addMsg(t,me){
-  const d=document.createElement("div");
-  d.className="msg"+(me?" me":"");
-  d.innerText=t;
-  chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
+function showRecharge(){
+  document.getElementById("recharge").style.display = "block";
 }
 
-/* START CHAT */
+/* -------- WALLET -------- */
+function rechargeWallet(amount){
+  const min = pricePerMinute * minimumMinutes;
+
+  if(wallet === 0 && amount < min){
+    alert(`Minimum recharge is ₹${min}`);
+    return;
+  }
+
+  wallet += amount;
+  walletEl.textContent = wallet;
+  document.getElementById("recharge").style.display = "none";
+
+  if(!chatStarted){
+    startChat();
+  } else {
+    recalcTime();
+  }
+
+  systemMsg(`💰 Wallet recharged ₹${amount}`);
+}
+
+/* -------- CHAT START -------- */
 function startChat(){
-  if(!name.value||!dob.value||!time.value||!place.value){
-    alert("Fill all details");
-    return;
-  }
+  chatStarted = true;
 
-  if(wallet < pricePerMinute*5){
-    alert("Minimum recharge required");
-    return;
-  }
+  const d = window.customerDetails;
+  systemMsg(
+`🧑 Customer Details
+Name: ${d.name}
+Gender: ${d.gender}
+DOB: ${d.dob}
+Birth Time: ${d.time}
+Birth Place: ${d.place}`
+  );
 
-  addMsg(
-`Name: ${name.value}
-DOB: ${dob.value}
-Time: ${time.value}
-Place: ${place.value}`,false);
-
-  seconds = Math.floor((wallet/pricePerMinute)*60);
-  document.getElementById("formOverlay").style.display="none";
-  runTimer();
+  recalcTime();
+  startTimer();
 }
 
-/* TIMER */
-function runTimer(){
+function recalcTime(){
+  timeLeft = Math.floor((wallet / pricePerMinute) * 60);
   updateTimer();
-  timerInt=setInterval(()=>{
-    seconds--;
-    wallet = Math.max(0, wallet - pricePerMinute/60);
-    updateTimer();
+}
 
-    if(seconds===60) addMsg("⚠️ 1 minute left. Please recharge.",false);
-    if(seconds===30) addMsg("⚠️ 30 seconds left. Recharge now.",false);
+/* -------- TIMER -------- */
+function startTimer(){
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
 
-    if(seconds<=0){
-      clearInterval(timerInt);
-      addMsg("⛔ Chat ended due to low balance.",false);
+    if(timeLeft === 60){
+      systemMsg("⚠️ Only 1 minute left. Please recharge.");
     }
+
+    if(timeLeft === 30){
+      systemMsg("⚠️ 30 seconds remaining.");
+    }
+
+    if(timeLeft <= 0){
+      clearInterval(timerInterval);
+      chatStarted = false;
+      systemMsg("⛔ Chat ended due to insufficient balance.");
+      return;
+    }
+
+    updateTimer();
   },1000);
 }
 
 function updateTimer(){
-  const m=Math.floor(seconds/60);
-  const s=seconds%60;
-  timer.innerText=`${m}:${s.toString().padStart(2,"0")}`;
-  document.getElementById("wallet").innerText=Math.floor(wallet);
+  const m = String(Math.floor(timeLeft/60)).padStart(2,"0");
+  const s = String(timeLeft%60).padStart(2,"0");
+  timerEl.textContent = `${m}:${s}`;
 }
 
-/* WALLET */
-function openWallet(){ walletOverlay.style.display="flex"; }
-function closeWallet(){ walletOverlay.style.display="none"; }
+/* -------- MESSAGES -------- */
+function send(){
+  if(!chatStarted){
+    alert("Chat not active");
+    return;
+  }
+  const input = document.getElementById("msg");
+  if(!input.value.trim()) return;
 
-function addMoney(a){
-  wallet+=a;
-  seconds+=Math.floor((a/pricePerMinute)*60);
-  updateTimer();
-  closeWallet();
+  const d=document.createElement("div");
+  d.className="msg me";
+  d.textContent=input.value;
+  chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;
+  input.value="";
 }
 
-/* END */
-function endChat(){
-  seconds=0;
-  clearInterval(timerInt);
-  addMsg("⛔ Chat ended.",false);
+function systemMsg(text){
+  const d=document.createElement("div");
+  d.className="msg system";
+  d.textContent=text;
+  chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;
 }
+
+/* ================= ADDITIONAL JS ================= */
+function openWalletModal(){
+  document.getElementById("walletModal").style.display="flex";
+}
+
+function closeWalletModal(){
+  document.getElementById("walletModal").style.display="none";
+}
+
+function startPayment(amount){
+  const options = {
+    key: "RAZORPAY_KEY_ID",
+    amount: amount * 100,
+    currency: "INR",
+    name: "Astrologer Chat",
+    description: "Wallet Recharge",
+    handler: function () {
+      wallet += amount;
+      walletEl.textContent = wallet;
+      recalcTime();
+      systemMsg(`💰 Wallet recharged ₹${amount}`);
+      closeWalletModal();
+    }
+  };
+  new Razorpay(options).open();
+}
+/* ================= END ADDITIONAL JS ================= */
 </script>
 
 </body>
 </html>
+
 
 
 
