@@ -6,301 +6,130 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
 <style>
-:root{--yellow:#FFDE59}
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:system-ui;
-  background:#f4f4f4;
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-}
-
-/* HEADER */
-.header{
-  background:var(--yellow);
-  padding:12px 14px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.status{font-size:12px}
-
-.rechargeBtn{
-  background:#fff;
-  padding:6px 16px;
-  border-radius:20px;
-  border:none;
-  font-weight:600;
-}
-
-/* FORM */
-.section{background:#fff;padding:14px}
-.section input{
-  width:100%;
-  padding:12px;
-  margin-bottom:10px;
-  border-radius:12px;
-  border:1px solid #ccc;
-}
-.section button{
-  width:100%;
-  padding:14px;
-  border-radius:24px;
-  background:var(--yellow);
-  border:none;
-  font-weight:600;
-}
-
-/* CHAT */
-.chat{flex:1;padding:12px;overflow-y:auto}
-.msg{
-  max-width:80%;
-  padding:10px 12px;
-  border-radius:12px;
-  margin-bottom:6px;
-  font-size:14px;
-}
+body{margin:0;font-family:system-ui;background:#f4f4f4;height:100vh;display:flex;flex-direction:column}
+.header{background:#FFDE59;padding:12px}
+.chat{flex:1;padding:12px;overflow:auto}
+.msg{padding:10px;border-radius:10px;margin-bottom:6px;max-width:80%}
 .me{background:#fff;margin-left:auto}
 .astro{background:#e8f0ff}
-.system{background:#fff3cd;text-align:center}
-
-.time{
-  font-size:11px;
-  opacity:.6;
-  margin-top:4px;
-  text-align:right;
-}
-
-/* INPUT */
-.controls{display:flex;gap:8px;padding:10px;background:#fff}
-.controls input{
-  flex:1;
-  padding:10px;
-  border-radius:20px;
-  border:1px solid #ccc;
-}
-.controls button{
-  padding:10px 16px;
-  border-radius:20px;
-  background:var(--yellow);
-  border:none;
-  font-weight:600;
-}
-
-/* RECHARGE MODAL */
-.rechargeModal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.5);
-  display:none;
-  justify-content:center;
-  align-items:flex-end;
-}
-.rechargeBox{
-  width:100%;
-  max-width:420px;
-  background:#fff;
-  border-radius:20px 20px 0 0;
-  padding:18px;
-  position:relative;
-}
-.closeX{
-  position:absolute;
-  top:10px;
-  right:14px;
-  font-size:18px;
-  cursor:pointer;
-}
-
-.amountGrid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-}
-.amountGrid button{
-  padding:14px;
-  border-radius:12px;
-  border:1px solid #ddd;
-  background:#f7f7f7;
-  font-weight:600;
-}
-.amountGrid button.active{background:var(--yellow)}
-
-.payBtn{
-  width:100%;
-  margin-top:16px;
-  padding:14px;
-  border-radius:18px;
-  background:var(--yellow);
-  border:none;
-  font-weight:600;
-}
+.controls{display:flex;padding:10px;background:#fff}
+input{flex:1;padding:10px;border-radius:20px}
+button{padding:10px 16px;border-radius:20px;background:#FFDE59;border:none}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <div>
-    Customer Chat<br>
-    <span id="astroStatus" class="status">Checking astrologer…</span><br>
-    ⏱️ <span id="timer">--:--</span>
-  </div>
-  <button class="rechargeBtn" onclick="openRecharge()">Recharge</button>
+  Customer Chat | ⏱ <span id="timer">--:--</span>
 </div>
 
-<div id="details" class="section">
-  <input id="c_name" placeholder="Full Name">
-  <input id="c_gender" placeholder="Gender">
-  <input id="c_dob" type="date">
-  <input id="c_time" placeholder="Birth Time">
-  <input id="c_place" placeholder="Birth Place">
-  <button onclick="submitDetails()">Continue</button>
-</div>
+<div id="chat" class="chat"></div>
 
-<div id="chat" class="chat" style="display:none"></div>
-
-<div id="controls" class="controls" style="display:none">
-  <input id="msg" placeholder="Type message…">
+<div class="controls">
+  <input id="msg" placeholder="Type message">
   <button onclick="send()">Send</button>
 </div>
 
-<div id="rechargeModal" class="rechargeModal">
-  <div class="rechargeBox">
-    <div class="closeX" onclick="closeRecharge()">✕</div>
-    <div class="amountGrid">
-      <button onclick="selectAmount(this,50)">50</button>
-      <button onclick="selectAmount(this,100)">100</button>
-      <button onclick="selectAmount(this,200)">200</button>
-    </div>
-    <button class="payBtn" onclick="demoPay()">Proceed to Pay</button>
-  </div>
-</div>
-
 <script>
-const CHANNEL="astro_gautam_chat";
-const uuid="Customer_"+Math.random().toString(36).slice(2,7);
-const pricePerMinute=10;
+/* ---------------- CONFIG ---------------- */
+const firebaseConfig = {
+  /* YOUR FIREBASE CONFIG */
+};
 
-let wallet=0,chatStarted=false,timeLeft=0,timerInterval=null,selectedAmount=50;
+firebase.initializeApp(firebaseConfig);
+const functions = firebase.functions();
+const chatNow = functions.httpsCallable("chatNow");
+const sendMessageFn = functions.httpsCallable("sendMessage");
 
-const chat=document.getElementById("chat");
-const timerEl=document.getElementById("timer");
+const customerId = "cust_" + Math.random().toString(36).slice(2,7);
+const astrologerId = "Gautam";
 
-const pubnub=new PubNub({
-  publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
-  subscribeKey:"sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
-  uuid
-});
+/* ---------------- STATE ---------------- */
+let pubnub, channel, sessionId;
+let timeLeft = 0, timerInterval;
 
-pubnub.subscribe({channels:[CHANNEL],withPresence:true});
+/* ---------------- START SESSION ---------------- */
+(async function start() {
+  const res = await chatNow({ customerId, astrologerId });
+  sessionId = res.data.sessionId;
+  channel = res.data.channel;
+  timeLeft = res.data.remainingSeconds;
 
-/* PRESENCE FIX */
-pubnub.hereNow({channels:[CHANNEL]},(_,r)=>{
-  astroStatus.textContent =
-    r.channels[CHANNEL]?.occupancy>1
-    ? "Astrologer: Online"
-    : "Astrologer: Offline";
-});
+  initTimer();
+  initPubNub();
+})();
 
-pubnub.addListener({
-  message:e=>{
-    const m=e.message;
-    if(m.sender===uuid)return;
-    addMsg(m.text,"astro",m.ts);
-  },
-  presence:e=>{
-    if(e.uuid==="Astrologer_Gautam"){
-      astroStatus.textContent="Astrologer: "+(e.action==="join"?"Online":"Offline");
-    }
-  }
-});
+/* ---------------- PUBNUB ---------------- */
+function initPubNub(){
+  pubnub = new PubNub({
+    publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
+    subscribeKey:"sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
+    uuid: customerId
+  });
 
-function submitDetails(){
-  details.style.display="none";
-  chat.style.display="block";
-  controls.style.display="flex";
-  openRecharge();
+  pubnub.subscribe({ channels:[channel] });
 
-  pubnub.publish({
-    channel:CHANNEL,
-    message:{
-      sender:uuid,
-      text:`🧾 Customer Details
-Name: ${c_name.value}
-Gender: ${c_gender.value}
-DOB: ${c_dob.value}
-Time: ${c_time.value}
-Place: ${c_place.value}`,
-      ts:Date.now()
+  pubnub.addListener({
+    message:e=>{
+      const m=e.message;
+      if(m.senderId===customerId) return;
+      addMsg(m.text,"astro",m.ts);
     }
   });
 }
 
+/* ---------------- SEND ---------------- */
 function send(){
-  if(!chatStarted)return alert("Recharge first");
-  const t=msg.value.trim();
-  if(!t)return;
+  const text=msg.value.trim();
+  if(!text) return;
   msg.value="";
-  addMsg(t,"me",Date.now());
-  pubnub.publish({channel:CHANNEL,message:{sender:uuid,text:t,ts:Date.now()}});
+  addMsg(text,"me",Date.now());
+
+  pubnub.publish({
+    channel,
+    message:{ sessionId, senderId:customerId, text, ts:Date.now() }
+  });
+
+  sendMessageFn({ sessionId, senderId:customerId, text });
 }
 
+/* ---------------- UI ---------------- */
 function addMsg(text,type,ts){
   const d=document.createElement("div");
   d.className="msg "+type;
-  d.innerHTML=text.replace(/\n/g,"<br>")+
-    `<div class="time">${new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>`;
+  d.innerHTML=text+`<div style="font-size:11px">${new Date(ts).toLocaleTimeString()}</div>`;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
 
-/* TIMER */
-function startTimer(){
-  clearInterval(timerInterval);
+/* ---------------- TIMER ---------------- */
+function initTimer(){
+  updateTimer();
   timerInterval=setInterval(()=>{
     timeLeft--;
     if(timeLeft<=0){
       clearInterval(timerInterval);
-      chatStarted=false;
-      addMsg("⛔ Session ended","system",Date.now());
+      addMsg("⛔ Session ended","astro",Date.now());
       return;
     }
     updateTimer();
   },1000);
 }
 function updateTimer(){
-  timerEl.textContent=
+  timer.textContent =
     String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
     String(timeLeft%60).padStart(2,"0");
-}
-
-/* RECHARGE */
-function openRecharge(){rechargeModal.style.display="flex"}
-function closeRecharge(){rechargeModal.style.display="none"}
-function selectAmount(b,a){
-  selectedAmount=a;
-  document.querySelectorAll(".amountGrid button").forEach(x=>x.classList.remove("active"));
-  b.classList.add("active");
-}
-function demoPay(){
-  wallet+=selectedAmount;
-  timeLeft=Math.floor((wallet/pricePerMinute)*60);
-  chatStarted=true;
-  updateTimer();
-  startTimer();
-  closeRecharge();
 }
 </script>
 
 </body>
 </html>
+
 
 
 
