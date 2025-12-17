@@ -84,8 +84,13 @@ body{
 /* ---------------- FIREBASE INIT ---------------- */
 firebase.initializeApp({
   apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
-  projectId: "connect-astro-e5309"
+  authDomain: "connect-astro-e5309.firebaseapp.com",
+  projectId: "connect-astro-e5309",
+  storageBucket: "connect-astro-e5309.appspot.com",
+  messagingSenderId: "19853749942",
+  appId: "1:19853749942:web:9857d058fcaeda0ba90017"
 });
+
 
 const functions = firebase.functions();
 const demoRecharge = functions.httpsCallable("demoRecharge");
