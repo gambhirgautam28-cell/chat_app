@@ -13,36 +13,77 @@
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
-body{margin:0;font-family:system-ui;background:#f4f4f4;height:100vh;display:flex;flex-direction:column}
-.header{background:#FFDE59;padding:12px;font-weight:600}
-.chat{flex:1;padding:12px;overflow-y:auto}
-.msg{padding:10px;border-radius:12px;margin-bottom:8px;max-width:80%}
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#f4f4f4;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+.header{
+  background:#FFDE59;
+  padding:12px;
+  font-weight:600;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.chat{
+  flex:1;
+  padding:12px;
+  overflow-y:auto;
+}
+.msg{
+  padding:10px 12px;
+  border-radius:12px;
+  margin-bottom:8px;
+  max-width:80%;
+}
 .me{background:#fff;margin-left:auto}
 .astro{background:#e8f0ff}
-.controls{display:flex;gap:8px;padding:10px;background:#fff}
-input{flex:1;padding:10px;border-radius:20px}
-button{padding:10px 16px;border-radius:20px;background:#FFDE59;border:none}
+.controls{
+  display:flex;
+  gap:8px;
+  padding:10px;
+  background:#fff;
+}
+.controls input{
+  flex:1;
+  padding:10px;
+  border-radius:20px;
+}
+.controls button{
+  padding:10px 16px;
+  border-radius:20px;
+  background:#FFDE59;
+  border:none;
+  font-weight:600;
+}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  Customer Chat ⏱ <span id="timer">--:--</span>
+  <div>
+    Customer Chat<br>
+    ⏱️ <span id="timer">--:--</span>
+  </div>
   <button onclick="recharge()">Recharge ₹50</button>
 </div>
 
 <div id="chat" class="chat"></div>
 
 <div class="controls">
-  <input id="msg" placeholder="Type message">
+  <input id="msg" placeholder="Type message…">
   <button onclick="send()">Send</button>
 </div>
 
 <script>
-/* 🔥 FIREBASE INIT */
+/* ---------------- FIREBASE INIT ---------------- */
 firebase.initializeApp({
-  apiKey: "YOUR_API_KEY",
+  apiKey: "AIzaSyBPOzL5ZoYd0NelkDNYk0LGBPDYVT2Tqew",
   projectId: "connect-astro-e5309"
 });
 
@@ -50,27 +91,47 @@ const functions = firebase.functions();
 const demoRecharge = functions.httpsCallable("demoRecharge");
 const chatNow = functions.httpsCallable("chatNow");
 
-/* STATE */
-const customerId = "cust_" + Math.random().toString(36).slice(2,7);
+/* ---------------- STATE ---------------- */
+const customerId = "cust_" + Math.random().toString(36).slice(2,8);
 const astrologerId = "Gautam";
 
-let pubnub, sessionId, channel;
-let timeLeft = 0, timerInterval;
+let pubnub = null;
+let sessionId = null;
+let channel = null;
+let timeLeft = 0;
+let timerInterval = null;
 
-/* RECHARGE */
+/* ---------------- RECHARGE + START SESSION ---------------- */
 async function recharge(){
-  await demoRecharge({ customerId, amount: 50 });
-  const res = await chatNow({ customerId, astrologerId });
+  try {
+    // 1️⃣ Add money
+    await demoRecharge({ customerId, amount: 50 });
 
-  sessionId = res.data.sessionId;
-  channel = res.data.channel;
-  timeLeft = res.data.remainingSeconds;
+    // 2️⃣ Start / refresh session
+    const res = await chatNow({ customerId, astrologerId });
 
-  if (!pubnub) initPubNub();
-  startTimer();
+    sessionId = res.data.sessionId;
+    channel = res.data.channel;
+    timeLeft = Number(res.data.remainingSeconds);
+
+    if (!timeLeft || timeLeft <= 0) {
+      alert("No time available");
+      return;
+    }
+
+    if (!pubnub) initPubNub();
+
+    startTimer(); // 🔥 FIXED
+
+    console.log("Timer started with:", timeLeft);
+
+  } catch (e) {
+    console.error(e);
+    alert("Recharge failed");
+  }
 }
 
-/* PUBNUB */
+/* ---------------- PUBNUB ---------------- */
 function initPubNub(){
   pubnub = new PubNub({
     publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
@@ -82,50 +143,70 @@ function initPubNub(){
 
   pubnub.addListener({
     message:e=>{
-      if(e.message.sender!==customerId){
+      if(e.message.sender !== customerId){
         addMsg(e.message.text,"astro");
       }
     }
   });
 }
 
-/* SEND */
+/* ---------------- SEND MESSAGE ---------------- */
 function send(){
-  const t=msg.value.trim(); if(!t)return;
-  msg.value="";
+  const t = msg.value.trim();
+  if(!t) return;
+  msg.value = "";
   addMsg(t,"me");
 
   pubnub.publish({
     channel,
-    message:{ sender:customerId, text:t }
+    message:{
+      sender: customerId,
+      text: t
+    }
   });
 }
 
-/* UI */
-function addMsg(t,c){
-  const d=document.createElement("div");
-  d.className="msg "+c;
-  d.textContent=t;
+/* ---------------- UI ---------------- */
+function addMsg(text,type){
+  const d = document.createElement("div");
+  d.className = "msg " + type;
+  d.textContent = text;
   chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
+  chat.scrollTop = chat.scrollHeight;
 }
 
-/* TIMER */
+/* ---------------- TIMER (FINAL FIX) ---------------- */
 function startTimer(){
   clearInterval(timerInterval);
-  timerInterval=setInterval(()=>{
+
+  updateTimer(); // 🔥 SHOW IMMEDIATELY
+
+  timerInterval = setInterval(()=>{
     timeLeft--;
-    timer.textContent =
-      String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
-      String(timeLeft%60).padStart(2,"0");
+
+    if(timeLeft <= 0){
+      clearInterval(timerInterval);
+      timer.textContent = "00:00";
+      alert("Session ended");
+      return;
+    }
+
+    updateTimer();
   },1000);
+}
+
+function updateTimer(){
+  const m = Math.floor(timeLeft / 60);
+  const s = timeLeft % 60;
+
+  timer.textContent =
+    String(m).padStart(2,"0") + ":" +
+    String(s).padStart(2,"0");
 }
 </script>
 
 </body>
 </html>
-
-
 
 
 
