@@ -5,7 +5,6 @@
 <title>Customer Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- PubNub -->
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
@@ -31,7 +30,15 @@ body{
   font-weight:600;
 }
 
-/* DETAILS FORM */
+.rechargeBtn{
+  background:#fff;
+  padding:6px 16px;
+  border-radius:20px;
+  border:none;
+  font-weight:600;
+}
+
+/* DETAILS */
 .section{
   background:#fff;
   padding:14px;
@@ -137,9 +144,7 @@ body{
   font-weight:600;
 }
 
-.amountGrid button.active{
-  background:var(--yellow);
-}
+.amountGrid button.active{background:var(--yellow)}
 
 .payBtn{
   width:100%;
@@ -155,35 +160,30 @@ body{
 
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div>
     Customer Chat<br>
     ⏱️ <span id="timer">--:--</span>
   </div>
-  <button onclick="openRecharge()">Recharge</button>
+  <button class="rechargeBtn" onclick="openRecharge()">Recharge</button>
 </div>
 
-<!-- DETAILS FORM -->
 <div id="details" class="section">
   <input id="c_name" placeholder="Full Name">
   <input id="c_gender" placeholder="Gender">
   <input id="c_dob" type="date">
-  <input id="c_time" placeholder="Birth Time (HH:MM)">
+  <input id="c_time" placeholder="Birth Time">
   <input id="c_place" placeholder="Birth Place">
   <button onclick="submitDetails()">Continue</button>
 </div>
 
-<!-- CHAT -->
 <div id="chat" class="chat" style="display:none"></div>
 
-<!-- INPUT -->
 <div id="controls" class="controls" style="display:none">
   <input id="msg" placeholder="Type message…">
   <button onclick="send()">Send</button>
 </div>
 
-<!-- RECHARGE -->
 <div id="rechargeModal" class="rechargeModal">
   <div class="rechargeBox">
     <div class="closeX" onclick="closeRecharge()">✕</div>
@@ -199,83 +199,63 @@ body{
       <button onclick="selectAmount(this,2000)">2000</button>
     </div>
 
-    <button class="payBtn" onclick="demoPay()">Proceed to Pay</button>
+    <button class="payBtn" onclick="rechargeAndStart()">Proceed to Pay</button>
   </div>
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-const backendUrl =
-  "https://asia-south1-connect-astro-e5309.cloudfunctions.net/chatNowHttp";
+/* CONFIG */
+const backendUrl="https://asia-south1-connect-astro-e5309.cloudfunctions.net/chatNowHttp";
+const astrologerId="Gautam";
+const customerId="cust_"+Math.random().toString(36).slice(2,8);
 
-const astrologerId = "Gautam";
-const customerId = "cust_" + Math.random().toString(36).slice(2,8);
+/* STATE */
+let selectedAmount=50;
+let pubnub,sessionId,channel;
+let timeLeft=0,timerInterval;
+let chatStarted=false;
 
-/* ================= STATE ================= */
-let selectedAmount = 50;
-let pubnub, sessionId, channel;
-let timeLeft = 0;
-let timerInterval;
-let chatStarted = false;
-
-/* ================= DETAILS ================= */
+/* DETAILS */
 function submitDetails(){
-  if(!c_name.value||!c_gender.value||!c_dob.value||!c_time.value||!c_place.value){
-    alert("Please fill all details");
-    return;
-  }
-
   details.style.display="none";
   chat.style.display="block";
   controls.style.display="flex";
-
-  systemMsg("🧾 Details submitted");
   openRecharge();
 }
 
-/* ================= RECHARGE ================= */
+/* RECHARGE */
 function openRecharge(){rechargeModal.style.display="flex"}
 function closeRecharge(){rechargeModal.style.display="none"}
-
-function selectAmount(btn,a){
+function selectAmount(b,a){
   selectedAmount=a;
-  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+  document.querySelectorAll(".amountGrid button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
 }
 
-async function demoPay(){
+/* 🔥 FIXED RECHARGE FLOW */
+async function rechargeAndStart(){
   closeRecharge();
-  await startChatSession();
-}
 
-/* ================= START SESSION ================= */
-async function startChatSession(){
-  const res = await fetch(backendUrl,{
+  const res=await fetch(backendUrl,{
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      customerId,
-      astrologerId
-    })
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({customerId,astrologerId})
   }).then(r=>r.json());
 
-  if(res.error){
-    alert(res.error);
-    return;
-  }
+  if(res.error){alert(res.error);return;}
 
   sessionId=res.sessionId;
   channel=res.channel;
   timeLeft=res.remainingSeconds;
 
-  initPubNub();
-  startTimer();
-  chatStarted=true;
+  if(!pubnub) initPubNub();
+  restartTimer();
 
-  systemMsg("🟢 Chat started");
+  chatStarted=true;
+  systemMsg("🟢 Session active");
 }
 
-/* ================= PUBNUB ================= */
+/* PUBNUB */
 function initPubNub(){
   pubnub=new PubNub({
     publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
@@ -289,54 +269,37 @@ function initPubNub(){
     message:e=>{
       const m=e.message;
       if(m.sessionId!==sessionId)return;
-      if(m.senderId!==customerId){
-        addMsg(m.text,"astro");
-      }
+      if(m.senderId!==customerId)addMsg(m.text,"astro");
     }
   });
 }
 
-/* ================= CHAT ================= */
+/* CHAT */
 function send(){
-  if(!chatStarted){
-    alert("Please recharge first");
-    return;
-  }
-  const t=msg.value.trim();
-  if(!t)return;
+  if(!chatStarted)return alert("Recharge first");
+  const t=msg.value.trim(); if(!t)return;
   msg.value="";
   addMsg(t,"me");
 
   pubnub.publish({
     channel,
-    message:{
-      sessionId,
-      senderId:customerId,
-      text:t,
-      ts:Date.now()
-    }
+    message:{sessionId,senderId:customerId,text:t,ts:Date.now()}
   });
 }
 
-function addMsg(text,type){
+function addMsg(t,c){
   const d=document.createElement("div");
-  d.className="msg "+type;
-  d.textContent=text;
+  d.className="msg "+c;
+  d.textContent=t;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
+function systemMsg(t){addMsg(t,"system")}
 
-function systemMsg(t){
-  const d=document.createElement("div");
-  d.className="msg system";
-  d.textContent=t;
-  chat.appendChild(d);
-}
-
-/* ================= TIMER ================= */
-function startTimer(){
-  updateTimer();
+/* TIMER */
+function restartTimer(){
   clearInterval(timerInterval);
+  updateTimer();
   timerInterval=setInterval(()=>{
     timeLeft--;
     if(timeLeft<=0){
@@ -348,7 +311,6 @@ function startTimer(){
     updateTimer();
   },1000);
 }
-
 function updateTimer(){
   timer.textContent=
     String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
