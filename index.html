@@ -5,7 +5,6 @@
 <title>Customer Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- PubNub SDK -->
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
@@ -21,7 +20,7 @@ body{
   flex-direction:column;
 }
 
-/* ================= HEADER ================= */
+/* HEADER */
 .header{
   background:var(--yellow);
   padding:12px 14px;
@@ -31,15 +30,12 @@ body{
   font-weight:600;
 }
 
-.rechargeBtn{
-  background:#fff;
-  padding:6px 14px;
-  border-radius:20px;
-  border:none;
-  font-weight:600;
+.status{
+  font-size:12px;
+  font-weight:500;
 }
 
-/* ================= FORM ================= */
+/* FORM */
 .section{
   background:#fff;
   padding:14px;
@@ -60,10 +56,9 @@ body{
   background:var(--yellow);
   border:none;
   font-weight:600;
-  font-size:16px;
 }
 
-/* ================= CHAT ================= */
+/* CHAT */
 .chat{
   flex:1;
   padding:12px;
@@ -74,15 +69,22 @@ body{
   max-width:80%;
   padding:10px 12px;
   border-radius:12px;
-  margin-bottom:8px;
+  margin-bottom:6px;
   font-size:14px;
 }
 
 .me{background:#fff;margin-left:auto}
 .astro{background:#e8f0ff}
-.system{background:#fff3cd;text-align:center}
+.system{background:#fff3cd;text-align:center;font-size:13px}
 
-/* ================= INPUT ================= */
+.time{
+  font-size:11px;
+  opacity:.6;
+  margin-top:4px;
+  text-align:right;
+}
+
+/* INPUT */
 .controls{
   display:flex;
   gap:8px;
@@ -105,7 +107,7 @@ body{
   font-weight:600;
 }
 
-/* ================= RECHARGE MODAL ================= */
+/* RECHARGE */
 .rechargeModal{
   position:fixed;
   inset:0;
@@ -137,9 +139,7 @@ body{
   font-weight:600;
 }
 
-.amountGrid button.active{
-  background:var(--yellow);
-}
+.amountGrid button.active{background:var(--yellow)}
 
 .payBtn{
   width:100%;
@@ -150,33 +150,20 @@ body{
   border:none;
   font-weight:600;
 }
-
-.closeBtn{
-  width:100%;
-  margin-top:10px;
-  padding:12px;
-  border-radius:18px;
-  border:none;
-  background:#eee;
-}
 </style>
 </head>
 
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div>
     Customer Chat<br>
-    ⏱️ <span id="timer">--:--</span>
+    <span class="status" id="astroStatus">Astrologer: Offline</span>
   </div>
-  <div>
-    ₹--<br>
-    <button class="rechargeBtn" onclick="openRecharge()">Recharge</button>
-  </div>
+  <button onclick="openRecharge()">Recharge</button>
 </div>
 
-<!-- DETAILS FORM -->
+<!-- DETAILS -->
 <div id="details" class="section">
   <input id="c_name" placeholder="Full Name">
   <input id="c_gender" placeholder="Gender">
@@ -186,106 +173,103 @@ body{
   <button onclick="submitDetails()">Continue</button>
 </div>
 
-<!-- CHAT -->
 <div id="chat" class="chat" style="display:none"></div>
 
-<!-- INPUT -->
-<div class="controls" id="controls" style="display:none">
-  <input id="msg" placeholder="Type message…" />
+<div id="controls" class="controls" style="display:none">
+  <input id="msg" placeholder="Type message…">
   <button onclick="send()">Send</button>
 </div>
 
-<!-- RECHARGE MODAL -->
 <div id="rechargeModal" class="rechargeModal">
   <div class="rechargeBox">
-    <h3>Add money</h3>
-
     <div class="amountGrid">
-      <button onclick="selectAmount(this,50)">₹50</button>
-      <button onclick="selectAmount(this,100)">₹100</button>
-      <button onclick="selectAmount(this,200)">₹200</button>
+      <button onclick="selectAmount(this,50)">50</button>
+      <button onclick="selectAmount(this,100)">100</button>
+      <button onclick="selectAmount(this,200)">200</button>
     </div>
-
     <button class="payBtn" onclick="demoPay()">Proceed to Pay</button>
-    <button class="closeBtn" onclick="closeRecharge()">Cancel</button>
   </div>
 </div>
 
 <script>
-/* ================= CONFIG ================= */
+/* CONFIG */
 const CHANNEL="astro_gautam_chat";
 const pricePerMinute=10;
 
-/* ================= STATE ================= */
-let wallet=0,timeLeft=0,chatStarted=false,timerInterval=null,selectedAmount=50;
+/* STATE */
+let wallet=0,timeLeft=0,chatStarted=false,selectedAmount=50,timerInterval=null;
 
-/* ================= DOM ================= */
+/* DOM */
 const chat=document.getElementById("chat");
-const timerEl=document.getElementById("timer");
 
-/* ================= PUBNUB ================= */
+/* PUBNUB */
 const pubnub=new PubNub({
   publishKey:"pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
   subscribeKey:"sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
   uuid:"Customer_"+Math.random().toString(36).slice(2,7)
 });
 
-pubnub.subscribe({channels:[CHANNEL]});
+pubnub.subscribe({channels:[CHANNEL],withPresence:true});
 
 pubnub.addListener({
   message:e=>{
     const m=e.message;
     if(m.sender===pubnub.getUUID())return;
-    addMsg("Astrologer: "+m.text,"astro");
+    addMsg(m.text,"astro",e.timetoken);
+  },
+  presence:e=>{
+    if(e.uuid==="Astrologer_Gautam"){
+      astroStatus.textContent="Astrologer: "+(e.action==="join"?"Online":"Offline");
+    }
   }
 });
 
-/* ================= DETAILS ================= */
+/* DETAILS SEND */
 function submitDetails(){
   if(!c_name.value||!c_gender.value||!c_dob.value||!c_time.value||!c_place.value){
-    alert("Please fill all details");return;
+    alert("Fill all details");return;
   }
+
   details.style.display="none";
   chat.style.display="block";
   controls.style.display="flex";
   openRecharge();
-}
 
-/* ================= CHAT ================= */
-function send(){
-  if(!chatStarted){
-    alert("Please recharge to start chat");
-    return;
-  }
-  const text=msg.value.trim();
-  if(!text)return;
-  msg.value="";
-  addMsg("You: "+text,"me");
+  const detailsMsg=
+`🧾 New Customer Details
+Name: ${c_name.value}
+Gender: ${c_gender.value}
+DOB: ${c_dob.value}
+Time: ${c_time.value}
+Place: ${c_place.value}`;
 
   pubnub.publish({
     channel:CHANNEL,
-    message:{sender:pubnub.getUUID(),text}
+    message:{sender:pubnub.getUUID(),text:detailsMsg}
   });
 }
 
-function addMsg(text,type){
+/* CHAT */
+function send(){
+  if(!chatStarted)return alert("Please recharge first");
+  const text=msg.value.trim();
+  if(!text)return;
+  msg.value="";
+  addMsg(text,"me",Date.now());
+  pubnub.publish({channel:CHANNEL,message:{sender:pubnub.getUUID(),text}});
+}
+
+function addMsg(text,type,time){
   const d=document.createElement("div");
   d.className="msg "+type;
-  d.textContent=text;
+  d.innerHTML=text.replace(/\n/g,"<br>")+
+    `<div class="time">${new Date(time||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>`;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
 
-/* ================= RECHARGE ================= */
-function openRecharge(){
-  rechargeModal.style.display="flex";
-  highlightDefault();
-}
-function closeRecharge(){rechargeModal.style.display="none"}
-function highlightDefault(){
-  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
-  document.querySelector(".amountGrid button").classList.add("active");
-}
+/* RECHARGE */
+function openRecharge(){rechargeModal.style.display="flex"}
 function selectAmount(btn,a){
   selectedAmount=a;
   document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
@@ -293,44 +277,15 @@ function selectAmount(btn,a){
 }
 function demoPay(){
   wallet+=selectedAmount;
-  if(!chatStarted) startChat(); else recalcTime();
-  systemMsg("Session started");
+  chatStarted=true;
   closeRecharge();
 }
-
-/* ================= TIMER ================= */
-function startChat(){
-  chatStarted=true;
-  recalcTime();
-  startTimer();
-}
-function recalcTime(){
-  timeLeft=Math.floor((wallet/pricePerMinute)*60);
-  updateTimer();
-}
-function startTimer(){
-  clearInterval(timerInterval);
-  timerInterval=setInterval(()=>{
-    timeLeft--;
-    if(timeLeft<=0){
-      clearInterval(timerInterval);
-      chatStarted=false;
-      systemMsg("⛔ Session ended");
-      return;
-    }
-    updateTimer();
-  },1000);
-}
-function updateTimer(){
-  timerEl.textContent=
-    String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
-    String(timeLeft%60).padStart(2,"0");
-}
-function systemMsg(t){addMsg(t,"system")}
+function closeRecharge(){rechargeModal.style.display="none"}
 </script>
 
 </body>
 </html>
+
 
 
 
