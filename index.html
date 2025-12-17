@@ -20,69 +20,78 @@ button{padding:10px 14px;border-radius:20px;border:none;background:#F8CFAF;font-
 .section input{width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #ccc}
 .recharge button{margin:6px 6px 0 0}
 
-/* ================= ADDITIONAL CSS ================= */
-#walletFab{
-  position:fixed;
-  right:16px;
-  bottom:90px;
-  width:56px;
-  height:56px;
-  background:#F8CFAF;
-  border-radius:50%;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  box-shadow:0 6px 16px rgba(0,0,0,.25);
-  cursor:pointer;
-  z-index:999;
-}
-
-#walletFab img{
-  width:28px;
-  height:28px;
-}
-
-.walletModal{
+/* ================== NEW RECHARGE UI ================== */
+.rechargeModal{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.5);
+  background:rgba(0,0,0,.55);
   display:none;
   justify-content:center;
   align-items:flex-end;
-  z-index:1000;
+  z-index:2000;
 }
 
-.walletBox{
-  background:#fff;
+.rechargeBox{
   width:100%;
-  max-width:420px;
-  border-radius:20px 20px 0 0;
+  max-width:480px;
+  background:#fff;
+  border-radius:24px 24px 0 0;
   padding:20px;
+  animation:slideUp .25s ease;
 }
 
-.amounts{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:12px;
-  margin:16px 0;
+@keyframes slideUp{
+  from{transform:translateY(100%)}
+  to{transform:translateY(0)}
 }
 
-.amounts button{
+.rechargeBox h2{
+  text-align:center;
+  margin:0 0 14px;
+}
+
+.rechargeBox input{
+  width:100%;
   padding:14px;
   font-size:16px;
   border-radius:12px;
   border:1px solid #ccc;
-  background:#f8f8f8;
+  margin-bottom:14px;
+}
+
+.amountGrid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.amountGrid button{
+  padding:14px;
+  border-radius:14px;
+  background:#f7f7f7;
+  border:1px solid #ddd;
+  font-weight:600;
+}
+
+.payBtn{
+  width:100%;
+  margin-top:16px;
+  padding:14px;
+  border-radius:14px;
+  background:#f7c948;
+  font-size:16px;
+  border:none;
 }
 
 .closeBtn{
   width:100%;
-  padding:14px;
-  border-radius:12px;
+  margin-top:10px;
+  padding:12px;
   background:#eee;
   border:none;
+  border-radius:12px;
 }
-/* ================= END ADDITIONAL CSS ================= */
+/* ================== END NEW UI ================== */
 </style>
 </head>
 
@@ -100,7 +109,7 @@ button{padding:10px 14px;border-radius:20px;border:none;background:#F8CFAF;font-
   </div>
 </div>
 
-<!-- BIRTH DETAILS FORM -->
+<!-- DETAILS -->
 <div id="details" class="section">
   <h3>Enter Birth Details</h3>
   <input id="c_name" placeholder="Full Name">
@@ -111,7 +120,7 @@ button{padding:10px 14px;border-radius:20px;border:none;background:#F8CFAF;font-
   <button onclick="proceedToRecharge()">Continue</button>
 </div>
 
-<!-- RECHARGE -->
+<!-- ORIGINAL RECHARGE (UNCHANGED, STILL WORKS) -->
 <div id="recharge" class="section recharge" style="display:none">
   <p>Minimum recharge: ₹<span id="minRecharge"></span></p>
   <button onclick="rechargeWallet(50)">₹50</button>
@@ -120,39 +129,35 @@ button{padding:10px 14px;border-radius:20px;border:none;background:#F8CFAF;font-
   <button onclick="rechargeWallet(500)">₹500</button>
 </div>
 
-<!-- CHAT -->
 <div id="chat" class="chat"></div>
 
-<!-- INPUT -->
 <div class="controls">
   <input id="msg" placeholder="Type message…">
   <button onclick="send()">Send</button>
 </div>
 
-<!-- ================= ADDITIONAL HTML ================= -->
+<!-- ============== NEW RECHARGE MODAL ============== -->
+<div id="rechargeModal" class="rechargeModal">
+  <div class="rechargeBox">
+    <h2>Add money to wallet</h2>
 
-<!-- FLOATING WALLET ICON -->
-<div id="walletFab" onclick="openWalletModal()">
-  <img src="wallet-icon.png">
-</div>
+    <input id="customAmount" type="number" placeholder="Enter custom amount">
 
-<!-- WALLET MODAL -->
-<div id="walletModal" class="walletModal">
-  <div class="walletBox">
-    <h3>Add money to wallet</h3>
-
-    <div class="amounts">
-      <button onclick="startPayment(50)">₹50</button>
-      <button onclick="startPayment(100)">₹100</button>
-      <button onclick="startPayment(200)">₹200</button>
-      <button onclick="startPayment(500)">₹500</button>
+    <div class="amountGrid">
+      <button onclick="setAmount(500)">₹500</button>
+      <button onclick="setAmount(1000)">₹1000</button>
+      <button onclick="setAmount(2000)">₹2000</button>
+      <button onclick="setAmount(5000)">₹5000</button>
+      <button onclick="setAmount(10000)">₹10000</button>
+      <button onclick="setAmount(25000)">₹25000</button>
+      <button onclick="setAmount(50000)">₹50000</button>
     </div>
 
-    <button class="closeBtn" onclick="closeWalletModal()">Close</button>
+    <button class="payBtn" onclick="payNow()">Proceed to Pay</button>
+    <button class="closeBtn" onclick="closeRecharge()">Cancel</button>
   </div>
 </div>
 
-<!-- RAZORPAY SDK -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
@@ -176,161 +181,128 @@ minRechargeEl.textContent = pricePerMinute * minimumMinutes;
 
 /* -------- FORM -------- */
 function proceedToRecharge(){
-  const name = document.getElementById("c_name").value.trim();
-  const gender = document.getElementById("c_gender").value.trim();
-  const dob = document.getElementById("c_dob").value;
-  const time = document.getElementById("c_time").value.trim();
-  const place = document.getElementById("c_place").value.trim();
+  const name = c_name.value.trim();
+  const gender = c_gender.value.trim();
+  const dob = c_dob.value;
+  const time = c_time.value.trim();
+  const place = c_place.value.trim();
 
-  if(!name || !gender || !dob || !time || !place){
+  if(!name||!gender||!dob||!time||!place){
     alert("Please fill all details");
     return;
   }
 
-  document.getElementById("details").style.display = "none";
-  document.getElementById("recharge").style.display = "block";
-
-  window.customerDetails = { name, gender, dob, time, place };
+  details.style.display="none";
+  recharge.style.display="block";
+  window.customerDetails={name,gender,dob,time,place};
 }
 
 function showRecharge(){
-  document.getElementById("recharge").style.display = "block";
+  document.getElementById("rechargeModal").style.display="flex";
 }
 
 /* -------- WALLET -------- */
 function rechargeWallet(amount){
   const min = pricePerMinute * minimumMinutes;
+  if(wallet===0 && amount<min){ alert(`Minimum recharge is ₹${min}`); return; }
 
-  if(wallet === 0 && amount < min){
-    alert(`Minimum recharge is ₹${min}`);
-    return;
-  }
+  wallet+=amount;
+  walletEl.textContent=wallet;
+  recharge.style.display="none";
 
-  wallet += amount;
-  walletEl.textContent = wallet;
-  document.getElementById("recharge").style.display = "none";
-
-  if(!chatStarted){
-    startChat();
-  } else {
-    recalcTime();
-  }
+  if(!chatStarted) startChat();
+  else recalcTime();
 
   systemMsg(`💰 Wallet recharged ₹${amount}`);
 }
 
-/* -------- CHAT START -------- */
+/* -------- CHAT -------- */
 function startChat(){
-  chatStarted = true;
-
-  const d = window.customerDetails;
-  systemMsg(
-`🧑 Customer Details
-Name: ${d.name}
-Gender: ${d.gender}
-DOB: ${d.dob}
-Birth Time: ${d.time}
-Birth Place: ${d.place}`
-  );
-
+  chatStarted=true;
+  const d=window.customerDetails;
+  systemMsg(`🧑 Customer Details Name: ${d.name} Gender: ${d.gender} DOB: ${d.dob} Birth Time: ${d.time} Birth Place: ${d.place}`);
   recalcTime();
   startTimer();
 }
 
 function recalcTime(){
-  timeLeft = Math.floor((wallet / pricePerMinute) * 60);
+  timeLeft=Math.floor((wallet/pricePerMinute)*60);
   updateTimer();
 }
 
-/* -------- TIMER -------- */
 function startTimer(){
   clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
+  timerInterval=setInterval(()=>{
     timeLeft--;
-
-    if(timeLeft === 60){
-      systemMsg("⚠️ Only 1 minute left. Please recharge.");
-    }
-
-    if(timeLeft === 30){
-      systemMsg("⚠️ 30 seconds remaining.");
-    }
-
-    if(timeLeft <= 0){
+    if(timeLeft<=0){
       clearInterval(timerInterval);
-      chatStarted = false;
+      chatStarted=false;
       systemMsg("⛔ Chat ended due to insufficient balance.");
       return;
     }
-
     updateTimer();
   },1000);
 }
 
 function updateTimer(){
-  const m = String(Math.floor(timeLeft/60)).padStart(2,"0");
-  const s = String(timeLeft%60).padStart(2,"0");
-  timerEl.textContent = `${m}:${s}`;
+  timerEl.textContent=
+    String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
+    String(timeLeft%60).padStart(2,"0");
 }
 
 /* -------- MESSAGES -------- */
 function send(){
-  if(!chatStarted){
-    alert("Chat not active");
-    return;
-  }
-  const input = document.getElementById("msg");
-  if(!input.value.trim()) return;
-
+  if(!chatStarted) return alert("Chat not active");
+  if(!msg.value.trim()) return;
   const d=document.createElement("div");
   d.className="msg me";
-  d.textContent=input.value;
+  d.textContent=msg.value;
   chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
-  input.value="";
+  msg.value="";
 }
 
-function systemMsg(text){
+function systemMsg(t){
   const d=document.createElement("div");
   d.className="msg system";
-  d.textContent=text;
+  d.textContent=t;
   chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
 }
 
-/* ================= ADDITIONAL JS ================= */
-function openWalletModal(){
-  document.getElementById("walletModal").style.display="flex";
+/* ============== NEW PAYMENT LOGIC ============== */
+function closeRecharge(){
+  rechargeModal.style.display="none";
 }
 
-function closeWalletModal(){
-  document.getElementById("walletModal").style.display="none";
+function setAmount(a){
+  customAmount.value=a;
 }
 
-function startPayment(amount){
-  const options = {
-    key: "RAZORPAY_KEY_ID",
-    amount: amount * 100,
-    currency: "INR",
-    name: "Astrologer Chat",
-    description: "Wallet Recharge",
-    handler: function () {
-      wallet += amount;
-      walletEl.textContent = wallet;
+function payNow(){
+  const amount=Number(customAmount.value);
+  if(!amount || amount < pricePerMinute*minimumMinutes){
+    alert("Amount too low");
+    return;
+  }
+
+  const rzp=new Razorpay({
+    key:"RAZORPAY_KEY_ID",
+    amount:amount*100,
+    currency:"INR",
+    name:"Astrologer Chat",
+    handler:function(){
+      wallet+=amount;
+      walletEl.textContent=wallet;
       recalcTime();
       systemMsg(`💰 Wallet recharged ₹${amount}`);
-      closeWalletModal();
+      closeRecharge();
     }
-  };
-  new Razorpay(options).open();
+  });
+  rzp.open();
 }
-/* ================= END ADDITIONAL JS ================= */
 </script>
 
 </body>
 </html>
-
-
 
 
 
