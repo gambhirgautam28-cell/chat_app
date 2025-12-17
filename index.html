@@ -139,6 +139,10 @@ body{
   font-weight:600;
 }
 
+.amountGrid button.active{
+  background:var(--yellow);
+}
+
 .payBtn{
   width:100%;
   margin-top:18px;
@@ -163,7 +167,6 @@ body{
 
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div>
     <strong>Astrologer Gautam</strong><br>
@@ -175,7 +178,6 @@ body{
   </div>
 </div>
 
-<!-- DETAILS -->
 <div id="details" class="section">
   <input id="c_name" placeholder="Full Name">
   <input id="c_gender" placeholder="Gender">
@@ -185,24 +187,21 @@ body{
   <button onclick="proceedToChat()">Continue</button>
 </div>
 
-<!-- CHAT -->
 <div id="chat" class="chat"></div>
 
-<!-- INPUT -->
 <div class="controls">
   <input id="msg" placeholder="Type message…">
   <button onclick="send()">Send</button>
 </div>
 
-<!-- RECHARGE MODAL -->
 <div id="rechargeModal" class="rechargeModal">
   <div class="rechargeBox">
     <h2>Add money to wallet</h2>
 
     <div class="amountGrid">
-      <button onclick="setAmount(50)">₹50</button>
-      <button onclick="setAmount(100)">₹100</button>
-      <button onclick="setAmount(200)">₹200</button>
+      <button onclick="setAmount(this,50)">₹50</button>
+      <button onclick="setAmount(this,100)">₹100</button>
+      <button onclick="setAmount(this,200)">₹200</button>
     </div>
 
     <button class="payBtn" onclick="demoPay()">Proceed to Pay</button>
@@ -216,7 +215,7 @@ let wallet = 0;
 let timeLeft = 0;
 let chatStarted = false;
 let timerInterval = null;
-let selectedAmount = 0;
+let selectedAmount = 50; // ✅ default
 
 function proceedToChat(){
   if(!c_name.value||!c_gender.value||!c_dob.value||!c_time.value||!c_place.value){
@@ -227,18 +226,28 @@ function proceedToChat(){
   showRecharge();
 }
 
-/* DEMO RECHARGE */
-function showRecharge(){rechargeModal.style.display="flex"}
-function closeRecharge(){rechargeModal.style.display="none"}
-function setAmount(a){selectedAmount = a}
+/* RECHARGE DEMO */
+function showRecharge(){
+  rechargeModal.style.display="flex";
+  highlightDefault();
+}
+
+function closeRecharge(){
+  rechargeModal.style.display="none";
+}
+
+function highlightDefault(){
+  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
+  document.querySelector(".amountGrid button").classList.add("active");
+}
+
+function setAmount(btn,amount){
+  selectedAmount = amount;
+  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+}
 
 function demoPay(){
-  if(!selectedAmount){
-    alert("Please select an amount");
-    return;
-  }
-
-  // ✅ DEMO SUCCESS
   wallet += selectedAmount;
   walletEl.textContent = wallet;
 
@@ -252,7 +261,7 @@ function demoPay(){
   closeRecharge();
 }
 
-/* CHAT LOGIC */
+/* CHAT */
 function startChat(){
   chatStarted = true;
   recalcTime();
@@ -280,7 +289,7 @@ function startTimer(){
 
 function updateTimer(){
   timer.textContent =
-    String(Math.floor(timeLeft/60)).padStart(2,"0") + ":" +
+    String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
     String(timeLeft%60).padStart(2,"0");
 }
 
