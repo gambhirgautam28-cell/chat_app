@@ -2,15 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Astrologer Chat (Demo)</title>
+<title>Customer Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
+<!-- PubNub SDK -->
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
 
 <style>
-:root{--yellow:#FFDE59}
-*{box-sizing:border-box}
-
 body{
   margin:0;
   font-family:system-ui;
@@ -20,64 +18,34 @@ body{
   flex-direction:column;
 }
 
-/* HEADER */
 .header{
-  background:var(--yellow);
+  background:#FFDE59;
   padding:12px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.header button{
-  background:#fff;
-  border-radius:20px;
-  padding:6px 14px;
-  border:none;
   font-weight:600;
 }
 
-/* FORM */
-.section{
-  background:#fff;
-  padding:14px;
-}
-
-.section input{
-  width:100%;
-  padding:12px;
-  margin-bottom:10px;
-  border-radius:10px;
-  border:1px solid #ccc;
-}
-
-.section button{
-  width:100%;
-  padding:14px;
-  border-radius:20px;
-  background:var(--yellow);
-  border:none;
-  font-weight:600;
-}
-
-/* CHAT */
 .chat{
   flex:1;
-  padding:14px;
-  overflow:auto;
+  padding:12px;
+  overflow-y:auto;
 }
 
 .msg{
-  max-width:80%;
-  padding:10px;
+  padding:10px 12px;
   border-radius:12px;
   margin-bottom:8px;
+  max-width:80%;
 }
 
-.me{background:#fff;margin-left:auto}
-.system{background:#fff3cd;text-align:center}
+.me{
+  background:#fff;
+  margin-left:auto;
+}
 
-/* INPUT */
+.astro{
+  background:#e8f0ff;
+}
+
 .controls{
   display:flex;
   gap:8px;
@@ -87,71 +55,17 @@ body{
 
 .controls input{
   flex:1;
-  padding:12px;
+  padding:10px;
   border-radius:20px;
   border:1px solid #ccc;
 }
 
 .controls button{
-  padding:12px 18px;
+  padding:10px 16px;
   border-radius:20px;
-  background:var(--yellow);
-  border:none;
-}
-
-/* RECHARGE MODAL */
-.rechargeModal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.5);
-  display:none;
-  justify-content:center;
-  align-items:flex-end;
-}
-
-.rechargeBox{
-  width:100%;
-  max-width:420px;
-  background:#fff;
-  border-radius:20px 20px 0 0;
-  padding:18px;
-}
-
-.amountGrid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-}
-
-.amountGrid button{
-  padding:14px;
-  border-radius:12px;
-  border:1px solid #ddd;
-  background:#f7f7f7;
-  font-weight:600;
-}
-
-.amountGrid button.active{
-  background:var(--yellow);
-}
-
-.payBtn{
-  width:100%;
-  margin-top:16px;
-  padding:14px;
-  border-radius:18px;
-  background:var(--yellow);
+  background:#FFDE59;
   border:none;
   font-weight:600;
-}
-
-.closeBtn{
-  width:100%;
-  margin-top:10px;
-  padding:12px;
-  border-radius:18px;
-  border:none;
-  background:#eee;
 }
 </style>
 </head>
@@ -159,50 +73,17 @@ body{
 <body>
 
 <div class="header">
-  <div>
-    <strong>Astrologer Gautam</strong><br>
-    ⏱️ <span id="timer">--:--</span>
-  </div>
-  <div>
-    ₹<span id="wallet">0</span><br>
-    <button onclick="openRecharge()">Recharge</button>
-  </div>
-</div>
-
-<div id="details" class="section">
-  <input id="c_name" placeholder="Full Name">
-  <input id="c_gender" placeholder="Gender">
-  <input id="c_dob" type="date">
-  <input id="c_time" placeholder="Birth Time">
-  <input id="c_place" placeholder="Birth Place">
-  <button onclick="continueChat()">Continue</button>
+  Customer Chat
 </div>
 
 <div id="chat" class="chat"></div>
 
 <div class="controls">
-  <input id="msg" placeholder="Type message">
+  <input id="msg" placeholder="Type your message…" />
   <button onclick="send()">Send</button>
 </div>
 
-<div id="rechargeModal" class="rechargeModal">
-  <div class="rechargeBox">
-    <h3>Add money</h3>
-
-    <div class="amountGrid">
-      <button onclick="selectAmount(this,50)">₹50</button>
-      <button onclick="selectAmount(this,100)">₹100</button>
-      <button onclick="selectAmount(this,200)">₹200</button>
-    </div>
-
-    <button class="payBtn" onclick="demoPay()">Proceed to Pay</button>
-    <button class="closeBtn" onclick="closeRecharge()">Cancel</button>
-  </div>
-</div>
-
 <script>
-
-  <script>
 /* ================= PUBNUB SETUP ================= */
 const CHANNEL = "astro_gautam_chat";
 
@@ -212,15 +93,18 @@ const pubnub = new PubNub({
   uuid: "Customer_" + Math.random().toString(36).slice(2,7)
 });
 
+const chat = document.getElementById("chat");
+
+/* ================= SUBSCRIBE ================= */
 pubnub.subscribe({ channels: [CHANNEL] });
 
-/* ================= RECEIVE FROM ASTROLOGER ================= */
+/* ================= RECEIVE MESSAGES ================= */
 pubnub.addListener({
-  message: e => {
-    const m = e.message;
+  message: function (event) {
+    const m = event.message;
 
-    // ignore own messages
-    if(m.sender === pubnub.getUUID()) return;
+    // Ignore own messages
+    if (m.sender === pubnub.getUUID()) return;
 
     addMsg("Astrologer: " + m.text, "astro");
   }
@@ -228,15 +112,16 @@ pubnub.addListener({
 
 /* ================= SEND MESSAGE ================= */
 function send(){
-  if(!chatStarted || !msg.value.trim()) return;
+  const input = document.getElementById("msg");
+  const text = input.value.trim();
+  if(!text) return;
 
-  const text = msg.value.trim();
-  msg.value = "";
+  input.value = "";
 
-  // show on customer UI
+  // Show locally
   addMsg("You: " + text, "me");
 
-  // SEND TO PUBNUB
+  // Send to astrologer
   pubnub.publish({
     channel: CHANNEL,
     message: {
@@ -256,115 +141,9 @@ function addMsg(text, type){
 }
 </script>
 
-/* ===== STATE ===== */
-const pricePerMinute = 10;
-let wallet = 0;
-let timeLeft = 0;
-let chatStarted = false;
-let timerInterval = null;
-let selectedAmount = 50;
-
-/* ===== DOM FIX (THIS WAS MISSING BEFORE) ===== */
-const walletEl = document.getElementById("wallet");
-const timerEl = document.getElementById("timer");
-const chat = document.getElementById("chat");
-
-/* ===== FLOW ===== */
-function continueChat(){
-  if(!c_name.value||!c_gender.value||!c_dob.value||!c_time.value||!c_place.value){
-    alert("Fill all details"); return;
-  }
-  details.style.display="none";
-  openRecharge();
-}
-
-/* ===== RECHARGE ===== */
-function openRecharge(){
-  rechargeModal.style.display="flex";
-  highlightDefault();
-}
-
-function closeRecharge(){
-  rechargeModal.style.display="none";
-}
-
-function highlightDefault(){
-  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
-  document.querySelector(".amountGrid button").classList.add("active");
-}
-
-function selectAmount(btn,amt){
-  selectedAmount = amt;
-  document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
-}
-
-/* ===== DEMO PAY (WORKING) ===== */
-function demoPay(){
-  wallet += selectedAmount;
-  walletEl.textContent = wallet;
-
-  if(!chatStarted){
-    startChat();
-  }else{
-    recalcTime();
-  }
-
-  systemMsg("✅ Demo payment successful ₹"+selectedAmount);
-  closeRecharge();
-}
-
-/* ===== CHAT ===== */
-function startChat(){
-  chatStarted = true;
-  recalcTime();
-  startTimer();
-}
-
-function recalcTime(){
-  timeLeft = Math.floor((wallet / pricePerMinute) * 60);
-  updateTimer();
-}
-
-function startTimer(){
-  clearInterval(timerInterval);
-  timerInterval = setInterval(()=>{
-    timeLeft--;
-    if(timeLeft<=0){
-      clearInterval(timerInterval);
-      chatStarted=false;
-      systemMsg("⛔ Chat ended");
-      return;
-    }
-    updateTimer();
-  },1000);
-}
-
-function updateTimer(){
-  timerEl.textContent =
-    String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
-    String(timeLeft%60).padStart(2,"0");
-}
-
-function send(){
-  if(!chatStarted||!msg.value.trim()) return;
-  const d=document.createElement("div");
-  d.className="msg me";
-  d.textContent=msg.value;
-  chat.appendChild(d);
-  msg.value="";
-}
-
-function systemMsg(t){
-  const d=document.createElement("div");
-  d.className="msg system";
-  d.textContent=t;
-  chat.appendChild(d);
-}
-</script>
-
 </body>
 </html>
+
 
 
 
