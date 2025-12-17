@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>Astrologer Chat (Demo)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
+
 
 <style>
 :root{--yellow:#FFDE59}
@@ -199,6 +201,61 @@ body{
 </div>
 
 <script>
+
+  <script>
+/* ================= PUBNUB SETUP ================= */
+const CHANNEL = "astro_gautam_chat";
+
+const pubnub = new PubNub({
+  publishKey: "pub-c-a90a128a-4e77-4b6a-bbb3-59d0fb688ddc",
+  subscribeKey: "sub-c-1b514e35-fab1-4baf-88f1-6b628ab7e9c2",
+  uuid: "Customer_" + Math.random().toString(36).slice(2,7)
+});
+
+pubnub.subscribe({ channels: [CHANNEL] });
+
+/* ================= RECEIVE FROM ASTROLOGER ================= */
+pubnub.addListener({
+  message: e => {
+    const m = e.message;
+
+    // ignore own messages
+    if(m.sender === pubnub.getUUID()) return;
+
+    addMsg("Astrologer: " + m.text, "astro");
+  }
+});
+
+/* ================= SEND MESSAGE ================= */
+function send(){
+  if(!chatStarted || !msg.value.trim()) return;
+
+  const text = msg.value.trim();
+  msg.value = "";
+
+  // show on customer UI
+  addMsg("You: " + text, "me");
+
+  // SEND TO PUBNUB
+  pubnub.publish({
+    channel: CHANNEL,
+    message: {
+      sender: pubnub.getUUID(),
+      text: text
+    }
+  });
+}
+
+/* ================= UI HELPER ================= */
+function addMsg(text, type){
+  const d = document.createElement("div");
+  d.className = "msg " + (type === "me" ? "me" : "astro");
+  d.textContent = text;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+}
+</script>
+
 /* ===== STATE ===== */
 const pricePerMinute = 10;
 let wallet = 0;
