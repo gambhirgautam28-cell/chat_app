@@ -6,28 +6,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-:root{
-  --yellow:#FFDE59;
-  --text:#000;
-  --bg:#f4f4f4;
-}
-
+:root{--yellow:#FFDE59}
 *{box-sizing:border-box}
 
 body{
   margin:0;
-  font-family:system-ui,-apple-system;
-  background:var(--bg);
+  font-family:system-ui;
+  background:#f4f4f4;
   height:100vh;
   display:flex;
   flex-direction:column;
-  color:var(--text);
 }
 
 /* HEADER */
 .header{
   background:var(--yellow);
-  padding:12px 14px;
+  padding:12px;
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -37,8 +31,8 @@ body{
   background:#fff;
   border-radius:20px;
   padding:6px 14px;
-  font-weight:600;
   border:none;
+  font-weight:600;
 }
 
 /* FORM */
@@ -51,37 +45,35 @@ body{
   width:100%;
   padding:12px;
   margin-bottom:10px;
-  border-radius:12px;
+  border-radius:10px;
   border:1px solid #ccc;
 }
 
 .section button{
   width:100%;
   padding:14px;
-  border-radius:24px;
+  border-radius:20px;
   background:var(--yellow);
-  font-size:16px;
-  font-weight:600;
   border:none;
+  font-weight:600;
 }
 
 /* CHAT */
 .chat{
   flex:1;
   padding:14px;
-  overflow-y:auto;
+  overflow:auto;
 }
 
 .msg{
   max-width:80%;
-  padding:10px 14px;
-  border-radius:14px;
-  margin-bottom:10px;
-  font-size:14px;
+  padding:10px;
+  border-radius:12px;
+  margin-bottom:8px;
 }
 
 .me{background:#fff;margin-left:auto}
-.system{background:#fff8c6;text-align:center;font-size:13px}
+.system{background:#fff3cd;text-align:center}
 
 /* INPUT */
 .controls{
@@ -94,15 +86,14 @@ body{
 .controls input{
   flex:1;
   padding:12px;
-  border-radius:24px;
+  border-radius:20px;
   border:1px solid #ccc;
 }
 
 .controls button{
-  background:var(--yellow);
   padding:12px 18px;
-  border-radius:24px;
-  font-weight:600;
+  border-radius:20px;
+  background:var(--yellow);
   border:none;
 }
 
@@ -110,18 +101,17 @@ body{
 .rechargeModal{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.55);
+  background:rgba(0,0,0,.5);
   display:none;
   justify-content:center;
   align-items:flex-end;
-  z-index:3000;
 }
 
 .rechargeBox{
   width:100%;
   max-width:420px;
   background:#fff;
-  border-radius:24px 24px 0 0;
+  border-radius:20px 20px 0 0;
   padding:18px;
 }
 
@@ -133,9 +123,9 @@ body{
 
 .amountGrid button{
   padding:14px;
-  border-radius:14px;
-  background:#f7f7f7;
+  border-radius:12px;
   border:1px solid #ddd;
+  background:#f7f7f7;
   font-weight:600;
 }
 
@@ -145,22 +135,21 @@ body{
 
 .payBtn{
   width:100%;
-  margin-top:18px;
+  margin-top:16px;
   padding:14px;
   border-radius:18px;
   background:var(--yellow);
-  font-size:16px;
-  font-weight:600;
   border:none;
+  font-weight:600;
 }
 
 .closeBtn{
   width:100%;
   margin-top:10px;
   padding:12px;
-  background:#eee;
   border-radius:18px;
   border:none;
+  background:#eee;
 }
 </style>
 </head>
@@ -174,7 +163,7 @@ body{
   </div>
   <div>
     ₹<span id="wallet">0</span><br>
-    <button onclick="showRecharge()">Recharge</button>
+    <button onclick="openRecharge()">Recharge</button>
   </div>
 </div>
 
@@ -182,26 +171,26 @@ body{
   <input id="c_name" placeholder="Full Name">
   <input id="c_gender" placeholder="Gender">
   <input id="c_dob" type="date">
-  <input id="c_time" placeholder="Birth Time (HH:MM)">
+  <input id="c_time" placeholder="Birth Time">
   <input id="c_place" placeholder="Birth Place">
-  <button onclick="proceedToChat()">Continue</button>
+  <button onclick="continueChat()">Continue</button>
 </div>
 
 <div id="chat" class="chat"></div>
 
 <div class="controls">
-  <input id="msg" placeholder="Type message…">
+  <input id="msg" placeholder="Type message">
   <button onclick="send()">Send</button>
 </div>
 
 <div id="rechargeModal" class="rechargeModal">
   <div class="rechargeBox">
-    <h2>Add money to wallet</h2>
+    <h3>Add money</h3>
 
     <div class="amountGrid">
-      <button onclick="setAmount(this,50)">₹50</button>
-      <button onclick="setAmount(this,100)">₹100</button>
-      <button onclick="setAmount(this,200)">₹200</button>
+      <button onclick="selectAmount(this,50)">₹50</button>
+      <button onclick="selectAmount(this,100)">₹100</button>
+      <button onclick="selectAmount(this,200)">₹200</button>
     </div>
 
     <button class="payBtn" onclick="demoPay()">Proceed to Pay</button>
@@ -210,24 +199,30 @@ body{
 </div>
 
 <script>
+/* ===== STATE ===== */
 const pricePerMinute = 10;
 let wallet = 0;
 let timeLeft = 0;
 let chatStarted = false;
 let timerInterval = null;
-let selectedAmount = 50; // ✅ default
+let selectedAmount = 50;
 
-function proceedToChat(){
+/* ===== DOM FIX (THIS WAS MISSING BEFORE) ===== */
+const walletEl = document.getElementById("wallet");
+const timerEl = document.getElementById("timer");
+const chat = document.getElementById("chat");
+
+/* ===== FLOW ===== */
+function continueChat(){
   if(!c_name.value||!c_gender.value||!c_dob.value||!c_time.value||!c_place.value){
-    alert("Please fill all details");
-    return;
+    alert("Fill all details"); return;
   }
   details.style.display="none";
-  showRecharge();
+  openRecharge();
 }
 
-/* RECHARGE DEMO */
-function showRecharge(){
+/* ===== RECHARGE ===== */
+function openRecharge(){
   rechargeModal.style.display="flex";
   highlightDefault();
 }
@@ -241,12 +236,13 @@ function highlightDefault(){
   document.querySelector(".amountGrid button").classList.add("active");
 }
 
-function setAmount(btn,amount){
-  selectedAmount = amount;
+function selectAmount(btn,amt){
+  selectedAmount = amt;
   document.querySelectorAll(".amountGrid button").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
 }
 
+/* ===== DEMO PAY (WORKING) ===== */
 function demoPay(){
   wallet += selectedAmount;
   walletEl.textContent = wallet;
@@ -257,11 +253,11 @@ function demoPay(){
     recalcTime();
   }
 
-  systemMsg("✅ Demo payment successful ₹" + selectedAmount);
+  systemMsg("✅ Demo payment successful ₹"+selectedAmount);
   closeRecharge();
 }
 
-/* CHAT */
+/* ===== CHAT ===== */
 function startChat(){
   chatStarted = true;
   recalcTime();
@@ -277,10 +273,10 @@ function startTimer(){
   clearInterval(timerInterval);
   timerInterval = setInterval(()=>{
     timeLeft--;
-    if(timeLeft <= 0){
+    if(timeLeft<=0){
       clearInterval(timerInterval);
-      chatStarted = false;
-      systemMsg("⛔ Chat ended (demo balance over)");
+      chatStarted=false;
+      systemMsg("⛔ Chat ended");
       return;
     }
     updateTimer();
@@ -288,13 +284,13 @@ function startTimer(){
 }
 
 function updateTimer(){
-  timer.textContent =
+  timerEl.textContent =
     String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+
     String(timeLeft%60).padStart(2,"0");
 }
 
 function send(){
-  if(!chatStarted || !msg.value.trim()) return;
+  if(!chatStarted||!msg.value.trim()) return;
   const d=document.createElement("div");
   d.className="msg me";
   d.textContent=msg.value;
@@ -312,6 +308,7 @@ function systemMsg(t){
 
 </body>
 </html>
+
 
 
 
