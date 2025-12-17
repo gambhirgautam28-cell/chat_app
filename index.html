@@ -232,28 +232,63 @@ function selectAmount(b,a){
   b.classList.add("active");
 }
 
-/* 🔥 FIXED RECHARGE FLOW */
 async function rechargeAndStart(){
   closeRecharge();
 
-  const res=await fetch(backendUrl,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({customerId,astrologerId})
-  }).then(r=>r.json());
+  try {
+    // 1️⃣ DEMO RECHARGE: ADD MONEY TO WALLET
+    const rechargeRes = await fetch(
+      "https://asia-south1-connect-astro-e5309.cloudfunctions.net/demoRechargeHttp",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId,
+          amount: selectedAmount   // 👈 THIS is the recharge amount
+        })
+      }
+    ).then(r => r.json());
 
-  if(res.error){alert(res.error);return;}
+    if (rechargeRes.error) {
+      alert(rechargeRes.error);
+      return;
+    }
 
-  sessionId=res.sessionId;
-  channel=res.channel;
-  timeLeft=res.remainingSeconds;
+    // 2️⃣ START / REFRESH SESSION (RECALCULATE TIME)
+    const sessionRes = await fetch(
+      backendUrl, // chatNowHttp
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId,
+          astrologerId
+        })
+      }
+    ).then(r => r.json());
 
-  if(!pubnub) initPubNub();
-  restartTimer();
+    if (sessionRes.error) {
+      alert(sessionRes.error);
+      return;
+    }
 
-  chatStarted=true;
-  systemMsg("🟢 Session active");
+    // 3️⃣ APPLY NEW SESSION DATA
+    sessionId = sessionRes.sessionId;
+    channel = sessionRes.channel;
+    timeLeft = sessionRes.remainingSeconds;
+
+    if (!pubnub) initPubNub();
+    restartTimer();
+
+    chatStarted = true;
+    systemMsg("🟢 Session active (₹" + selectedAmount + " added)");
+
+  } catch (err) {
+    console.error(err);
+    alert("Recharge failed. Please try again.");
+  }
 }
+
 
 /* PUBNUB */
 function initPubNub(){
